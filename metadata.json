@@ -1,0 +1,7 @@
+{
+  "name": "绝知APP (Juezhi Super App)",
+  "description": "A customized Super App featuring 'One Core, Four Wings' architecture with AI-driven store and HQ management.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
