@@ -9,8 +9,10 @@ export enum UserRole {
 export enum TaskStatus {
   PENDING = 'PENDING',
   IN_PROGRESS = 'IN_PROGRESS',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
   COMPLETED = 'COMPLETED',
-  VERIFIED = 'VERIFIED'
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED'
 }
 
 export interface TaskActionLog {

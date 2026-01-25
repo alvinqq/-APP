@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Camera, Image as ImageIcon, Send, Save, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Send, Save, CheckCircle, Loader2, Activity } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 
 interface TaskEditModalProps {
@@ -17,21 +17,17 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 }) => {
   const [actionText, setActionText] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<TaskStatus>(TaskStatus.IN_PROGRESS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize status with current task status when opening
-  // MOVED UP: Hooks must be called before any early returns.
+  // Initialize form when opening
   React.useEffect(() => {
     if (task) {
-      setSelectedStatus(task.status);
       setActionText('');
       setAttachments([]);
     }
   }, [task, isOpen]);
 
-  // Early return comes AFTER all hooks are declared
   if (!task || !isOpen) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,15 +44,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
   const handleSubmit = () => {
-    if (!actionText.trim() && selectedStatus === task.status) {
-        alert("请输入处理描述或变更状态");
+    if (!actionText.trim()) {
+        alert("请输入处理描述 (必填)");
+        return;
+    }
+    
+    if (attachments.length === 0) {
+        alert("请上传现场照片/凭证 (必填)");
         return;
     }
 
     setIsSubmitting(true);
     // Simulate network delay
     setTimeout(() => {
-      onUpdate(task.id, actionText || '更新任务状态', attachments, selectedStatus);
+      // Update task status to PENDING_VERIFICATION ("待验证") on submission
+      onUpdate(task.id, actionText, attachments, TaskStatus.PENDING_VERIFICATION);
       setIsSubmitting(false);
       onClose();
     }, 800);
@@ -87,56 +89,48 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         {/* Body */}
         <div className="p-6 space-y-6">
           
-          {/* Status Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">更新状态</label>
-            <div className="flex gap-2">
-              {[
-                { value: TaskStatus.PENDING, label: '待处理' },
-                { value: TaskStatus.IN_PROGRESS, label: '进行中' },
-                { value: TaskStatus.COMPLETED, label: '已完成' }
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSelectedStatus(opt.value)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
-                    selectedStatus === opt.value
-                      ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+          {/* Read-only Status Display */}
+          <div className="flex items-center justify-between p-3 bg-red-50/50 rounded-xl border border-red-100">
+             <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Activity size={16} className="text-red-600" />
+                当前任务状态
+             </span>
+             <span className="px-3 py-1 rounded-full bg-white text-red-700 text-xs font-bold border border-red-100 flex items-center gap-1.5 shadow-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></div>
+                进行中
+             </span>
           </div>
 
           {/* Action Description */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">处理描述 / 备注</label>
+            <label className="text-sm font-semibold text-gray-700">
+              处理描述 / 备注 <span className="text-red-500">*</span>
+            </label>
             <textarea
               value={actionText}
               onChange={(e) => setActionText(e.target.value)}
               placeholder="请输入具体的执行操作，例如：已清理冷柜积冰，温度恢复正常..."
-              className="w-full h-32 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none resize-none text-sm"
+              className="w-full h-32 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-100 focus:border-red-400 outline-none resize-none text-sm transition-all"
             />
           </div>
 
           {/* Image Upload */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700 flex items-center justify-between">
-              <span>现场照片 / 凭证</span>
+              <span>现场照片 / 凭证 <span className="text-red-500">*</span></span>
               <span className="text-xs font-normal text-gray-400">{attachments.length} 张已上传</span>
             </label>
             
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {/* Upload Button */}
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="w-24 h-24 flex-shrink-0 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-colors group"
               >
-                <Camera size={24} className="mb-1" />
-                <span className="text-[10px]">拍照/上传</span>
+                <div className="bg-gray-100 p-2 rounded-full mb-1 group-hover:bg-white transition-colors">
+                    <Camera size={20} />
+                </div>
+                <span className="text-[10px] font-medium">拍照/上传</span>
               </button>
               <input 
                 type="file" 
@@ -148,14 +142,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
               {/* Previews */}
               {attachments.map((src, idx) => (
-                <div key={idx} className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border border-gray-100 group">
+                <div key={idx} className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden border border-gray-100 group shadow-sm">
                   <img src={src} alt="preview" className="w-full h-full object-cover" />
-                  <button 
-                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X size={12} />
-                  </button>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button 
+                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        className="bg-white/20 hover:bg-red-600 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors"
+                    >
+                        <X size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -175,8 +171,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             disabled={isSubmitting}
             className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-200 hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            确认提交
+            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+            提交完成
           </button>
         </div>
       </div>

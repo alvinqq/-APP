@@ -22,7 +22,8 @@ import {
   Target,
   User,
   Briefcase,
-  Users
+  Users,
+  XCircle
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -230,14 +231,15 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ task, onClick }) => (
-  <div onClick={onClick} className="flex items-center p-4 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer group transition-colors">
+  <div onClick={onClick} className={`flex items-center p-4 bg-white border rounded-xl hover:bg-gray-50 cursor-pointer group transition-colors ${task.status === TaskStatus.REJECTED ? 'border-red-100 opacity-70' : 'border-gray-100'}`}>
     <div className={`w-2 h-12 rounded-full mr-4 ${
+      task.status === TaskStatus.REJECTED ? 'bg-gray-300' :
       task.priority === 'high' ? 'bg-red-500' : 
       task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
     }`} />
     <div className="flex-1">
       <div className="flex justify-between mb-1">
-        <h4 className="font-semibold text-gray-800">{task.title}</h4>
+        <h4 className={`font-semibold ${task.status === TaskStatus.REJECTED ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{task.title}</h4>
         <span className="text-xs text-gray-400">{task.timestamp}</span>
       </div>
       <p className="text-sm text-gray-500 line-clamp-1">{task.description}</p>
@@ -248,11 +250,17 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onClick }) => (
            </span>
          )}
          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-           task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+           task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-700' : 
+           task.status === TaskStatus.VERIFIED ? 'bg-blue-100 text-blue-700' :
+           task.status === TaskStatus.PENDING_VERIFICATION ? 'bg-orange-100 text-orange-700' :
+           task.status === TaskStatus.REJECTED ? 'bg-gray-100 text-gray-500' :
+           'bg-gray-100 text-gray-600'
          }`}>
            {task.status === TaskStatus.PENDING ? '待处理' : 
              task.status === TaskStatus.IN_PROGRESS ? '进行中' : 
-             task.status === TaskStatus.VERIFIED ? '已验证' : '已完成'}
+             task.status === TaskStatus.PENDING_VERIFICATION ? '待验证' : 
+             task.status === TaskStatus.VERIFIED ? '已验证' : 
+             task.status === TaskStatus.REJECTED ? '已拒绝' : '已完成'}
          </span>
       </div>
     </div>
@@ -358,6 +366,64 @@ export default function App() {
     });
   };
 
+  const handleTaskReject = (taskId: string) => {
+    const rejectLog: TaskActionLog = {
+        id: Date.now().toString(),
+        actor: '当前用户',
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        action: '拒绝了任务（任务已驳回）'
+    };
+    
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { 
+          ...t, 
+          status: TaskStatus.REJECTED,
+          logs: [...(t.logs || []), rejectLog]
+      } : t
+    ));
+
+    // Update selected task to reflect changes immediately
+    setSelectedTask(prev => {
+        if (prev && prev.id === taskId) {
+            return {
+                ...prev,
+                status: TaskStatus.REJECTED,
+                logs: [...(prev.logs || []), rejectLog]
+            };
+        }
+        return prev;
+    });
+  };
+
+  const handleTaskAccept = (taskId: string) => {
+    const acceptLog: TaskActionLog = {
+        id: Date.now().toString(),
+        actor: '当前用户',
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        action: '接收了任务，开始执行'
+    };
+
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { 
+          ...t, 
+          status: TaskStatus.IN_PROGRESS,
+          logs: [...(t.logs || []), acceptLog]
+      } : t
+    ));
+
+    // Update selected task to reflect changes immediately
+    setSelectedTask(prev => {
+        if (prev && prev.id === taskId) {
+            return {
+                ...prev,
+                status: TaskStatus.IN_PROGRESS,
+                logs: [...(prev.logs || []), acceptLog]
+            };
+        }
+        return prev;
+    });
+  };
+
   const handleTaskEdit = (taskId: string) => {
     setIsEditModalOpen(true);
   };
@@ -367,14 +433,16 @@ export default function App() {
       id: Date.now().toString(),
       actor: '当前用户',
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      action: actionText || `更新任务状态为: ${newStatus}`,
+      action: `完成任务处理: ${actionText}`,
       attachments: attachments
     };
 
+    // Update task with new status and also update loopStage to 6 (Execution Feedback) if it's an AI task
     setTasks(prev => prev.map(t => 
       t.id === taskId ? { 
           ...t, 
           status: newStatus,
+          loopStage: (t.loopStage && t.loopStage > 0) ? 6 : t.loopStage, // Move to 'Execution Feedback' (Stage 6)
           logs: [...(t.logs || []), newLog]
       } : t
     ));
@@ -385,10 +453,56 @@ export default function App() {
         return {
           ...prev,
           status: newStatus,
+          loopStage: (prev.loopStage && prev.loopStage > 0) ? 6 : prev.loopStage,
           logs: [...(prev.logs || []), newLog]
         };
       }
       return prev;
+    });
+  };
+
+  const handleAiVerify = (taskId: string) => {
+    // 模拟AI验证 (Simulate AI Verification)
+    // 随机通过或不通过 (80% pass rate)
+    const isPass = Math.random() > 0.2; 
+    
+    const verificationLog: TaskActionLog = {
+        id: Date.now().toString(),
+        actor: 'AI鉴赏家',
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        action: isPass 
+            ? 'AI视觉验证通过：任务完成质量符合标准 (Confidence: 98%)' 
+            : 'AI视觉验证不通过：现场照片模糊或未达到SOP要求，已驳回重新处理。'
+    };
+
+    setTasks(prev => prev.map(t => {
+      if (t.id !== taskId) return t;
+
+      // Logic for Loop Stage Update:
+      // Pass -> Stage 7 (Effect Verification / Completed)
+      // Fail -> Back to Stage 5 (Generate Task/Execution Needed) to retry
+      const newStage = (t.loopStage && t.loopStage > 0) ? (isPass ? 7 : 5) : t.loopStage;
+
+      return { 
+          ...t, 
+          status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING, // Pass -> Completed, Fail -> Pending
+          loopStage: newStage, 
+          logs: [...(t.logs || []), verificationLog]
+      };
+    }));
+
+    // Update selected task immediately
+    setSelectedTask(prev => {
+        if (prev && prev.id === taskId) {
+            const newStage = (prev.loopStage && prev.loopStage > 0) ? (isPass ? 7 : 5) : prev.loopStage;
+            return {
+                ...prev,
+                status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING,
+                loopStage: newStage,
+                logs: [...(prev.logs || []), verificationLog]
+            };
+        }
+        return prev;
     });
   };
 
@@ -719,7 +833,7 @@ export default function App() {
                   已完成
                   {taskFilter === 'completed' && (
                      <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                       {tasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.VERIFIED).length}
+                       {tasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.VERIFIED || t.status === TaskStatus.REJECTED).length}
                      </span>
                   )}
                    {taskFilter === 'completed' && <div className="absolute bottom-[-9px] left-0 w-full h-0.5 bg-green-600 rounded-t-full"></div>}
@@ -850,6 +964,9 @@ export default function App() {
         onClose={() => setSelectedTask(null)}
         onComplete={handleTaskComplete}
         onEdit={handleTaskEdit}
+        onReject={handleTaskReject}
+        onAccept={handleTaskAccept}
+        onAiVerify={handleAiVerify}
       />
 
       {/* TASK EDIT MODAL */}

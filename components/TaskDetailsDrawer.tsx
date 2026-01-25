@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, CheckCircle, Edit3, Clock, AlertCircle, Share2, Activity, History, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle, Edit3, Clock, AlertCircle, Share2, Activity, History, Image as ImageIcon, AlertTriangle, XCircle, Check, Loader2, BrainCircuit } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 
 interface TaskDetailsDrawerProps {
@@ -8,6 +8,9 @@ interface TaskDetailsDrawerProps {
   onClose: () => void;
   onComplete: (taskId: string) => void;
   onEdit: (taskId: string) => void;
+  onReject: (taskId: string) => void;
+  onAccept: (taskId: string) => void;
+  onAiVerify: (taskId: string) => void;
 }
 
 export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
@@ -16,8 +19,34 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
   onClose,
   onComplete,
   onEdit,
+  onReject,
+  onAccept,
+  onAiVerify
 }) => {
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Reset local state when task changes or drawer closes
+  useEffect(() => {
+    if (!isOpen) {
+        setShowRejectConfirm(false);
+        setIsVerifying(false);
+    }
+  }, [isOpen, task]);
+
   if (!task && !isOpen) return null;
+
+  const handleVerifyClick = () => {
+      if (task) {
+          setIsVerifying(true);
+          setTimeout(() => {
+            onAiVerify(task.id);
+            // We don't set setIsVerifying(false) here because the component might unmount or task status changes will trigger a re-render or effect. 
+            // But to be safe and showing transition:
+            setIsVerifying(false);
+          }, 1500);
+      }
+  };
 
   return (
     <>
@@ -32,11 +61,44 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
         className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-white shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {task && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full relative">
+            
+            {/* Rejection Confirmation Modal Overlay (Inside Drawer) */}
+            {showRejectConfirm && (
+                <div className="absolute inset-0 z-[80] bg-white/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-gray-100 p-6 text-center transform scale-100">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-2">确认驳回任务？</h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            你确定要将拒绝当前任务吗？拒绝后任务状态将变更为“已拒绝”，且上游创建者将收到通知。
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowRejectConfirm(false)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    onReject(task.id);
+                                    setShowRejectConfirm(false);
+                                }}
+                                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
+                            >
+                                确定驳回
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div className="flex items-center gap-2">
-                 <div className="w-1 h-5 bg-red-600 rounded-full"></div>
+                 <div className={`w-1 h-5 rounded-full ${task.status === TaskStatus.REJECTED ? 'bg-gray-400' : 'bg-red-600'}`}></div>
                  <h2 className="text-lg font-bold text-gray-800">任务详情</h2>
               </div>
               <button 
@@ -54,18 +116,23 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      task.status === TaskStatus.REJECTED ? 'bg-gray-100 text-gray-500 border-gray-200' :
                       task.priority === 'high' ? 'bg-red-50 text-red-700 border-red-100' :
                       task.priority === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                       'bg-gray-50 text-gray-700 border-gray-100'
                    }`}>
-                      {task.priority === 'high' ? '高优先级' : task.priority === 'medium' ? '中优先级' : '低优先级'}
+                      {task.status === TaskStatus.REJECTED ? '已失效' : 
+                       task.priority === 'high' ? '高优先级' : 
+                       task.priority === 'medium' ? '中优先级' : '低优先级'}
                    </span>
                    <span className="text-xs text-gray-400 flex items-center gap-1">
                       <Clock size={14} /> {task.timestamp}
                    </span>
                 </div>
                 
-                <h3 className="text-2xl font-bold text-gray-900 leading-snug">{task.title}</h3>
+                <h3 className={`text-2xl font-bold leading-snug ${task.status === TaskStatus.REJECTED ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                    {task.title}
+                </h3>
                 
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-gray-600 text-sm leading-relaxed">
                   {task.description}
@@ -96,11 +163,25 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                    <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
                     <Activity size={14} /> 当前状态
                   </div>
-                  <div className={`font-semibold flex items-center gap-2 ${task.status === TaskStatus.COMPLETED ? 'text-green-600' : 'text-red-600'}`}>
-                     <span className={`w-2 h-2 rounded-full ${task.status === TaskStatus.COMPLETED ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  <div className={`font-semibold flex items-center gap-2 ${
+                      task.status === TaskStatus.COMPLETED ? 'text-green-600' : 
+                      task.status === TaskStatus.VERIFIED ? 'text-blue-600' :
+                      task.status === TaskStatus.PENDING_VERIFICATION ? 'text-orange-600' :
+                      task.status === TaskStatus.REJECTED ? 'text-gray-500' :
+                      'text-red-600'
+                  }`}>
+                     <span className={`w-2 h-2 rounded-full ${
+                         task.status === TaskStatus.COMPLETED ? 'bg-green-500' : 
+                         task.status === TaskStatus.VERIFIED ? 'bg-blue-500' :
+                         task.status === TaskStatus.PENDING_VERIFICATION ? 'bg-orange-500' :
+                         task.status === TaskStatus.REJECTED ? 'bg-gray-400' :
+                         'bg-red-500'
+                     }`}></span>
                     {task.status === TaskStatus.PENDING ? '待处理' : 
                      task.status === TaskStatus.IN_PROGRESS ? '进行中' : 
-                     task.status === TaskStatus.VERIFIED ? '已验证' : '已完成'}
+                     task.status === TaskStatus.PENDING_VERIFICATION ? '待验证' :
+                     task.status === TaskStatus.VERIFIED ? '已验证' : 
+                     task.status === TaskStatus.REJECTED ? '已拒绝' : '已完成'}
                   </div>
                 </div>
               </div>
@@ -153,7 +234,7 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
               )}
 
               {/* Business Loop Stage Visualization */}
-              {task.loopStage && (
+              {task.loopStage && task.status !== TaskStatus.REJECTED && (
                 <div className="border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-5 rounded-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl"></div>
                   
@@ -185,31 +266,53 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
 
             {/* Footer Actions */}
             <div className="p-6 border-t border-gray-100 bg-white flex gap-4">
-              <button 
-                onClick={() => onEdit(task.id)}
-                className="flex-1 py-3 px-4 bg-white border-2 border-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                <Edit3 size={18} /> 执行/编辑
-              </button>
-              <button 
-                onClick={() => onComplete(task.id)}
-                disabled={task.status === TaskStatus.COMPLETED}
-                className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-100 active:scale-[0.98] ${
-                  task.status === TaskStatus.COMPLETED 
-                  ? 'bg-green-50 text-green-600 border border-green-100 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-red-200 hover:brightness-105'
-                }`}
-              >
-                {task.status === TaskStatus.COMPLETED ? (
+                {task.status === TaskStatus.PENDING ? (
                     <>
-                        <CheckCircle size={18} /> 已完成
+                        <button 
+                            onClick={() => setShowRejectConfirm(true)}
+                            className="flex-1 py-3 px-4 bg-white border-2 border-gray-100 text-red-600 font-semibold rounded-xl hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                        >
+                            <XCircle size={18} /> 驳回任务
+                        </button>
+                        <button 
+                            onClick={() => onAccept(task.id)}
+                            className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                        >
+                            <Check size={18} /> 接收任务
+                        </button>
                     </>
+                ) : task.status === TaskStatus.REJECTED ? (
+                    <button 
+                        disabled
+                        className="w-full py-3 px-4 bg-gray-100 border border-gray-200 text-gray-400 font-semibold rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                        <XCircle size={18} /> 任务已驳回
+                    </button>
+                ) : task.status === TaskStatus.PENDING_VERIFICATION ? (
+                    <button 
+                        onClick={handleVerifyClick}
+                        disabled={isVerifying}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait"
+                    >
+                        {isVerifying ? <Loader2 size={18} className="animate-spin" /> : <BrainCircuit size={18} />}
+                        AI 验证结果
+                    </button>
+                ) : task.status === TaskStatus.IN_PROGRESS ? (
+                    <button 
+                        onClick={() => onEdit(task.id)}
+                        className="w-full py-3 px-4 bg-white border-2 border-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                    >
+                        <Edit3 size={18} /> 执行任务
+                    </button>
                 ) : (
-                    <>
-                        <CheckCircle size={18} /> 标记完成
-                    </>
+                    // Completed or Verified
+                     <button 
+                        disabled
+                        className="w-full py-3 px-4 bg-green-50 text-green-600 border border-green-100 font-semibold rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                        <CheckCircle size={18} /> 已完成
+                    </button>
                 )}
-              </button>
             </div>
           </div>
         )}
