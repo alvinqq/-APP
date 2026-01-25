@@ -13,6 +13,14 @@ export enum TaskStatus {
   VERIFIED = 'VERIFIED'
 }
 
+export interface TaskActionLog {
+  id: string;
+  actor: string;      // 处理人
+  timestamp: string;  // 处理时间
+  action: string;     // 操作内容
+  attachments?: string[]; // 图片凭证 (Base64 or URL)
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -22,6 +30,20 @@ export interface Task {
   timestamp: string;
   source: 'AI_GENERATED' | 'MANUAL';
   loopStage?: number; // 1-7 corresponding to the closed loop
+  logs?: TaskActionLog[]; // 任务处理记录
+}
+
+export interface ExceptionAlert {
+  id: string;
+  title: string;
+  severity: 'high' | 'medium';
+  timestamp: string;
+  status: 'new' | 'assigned' | 'processing' | 'pending_verification' | 'resolved';
+  attribution: string; // AI Attribution analysis
+  recommendedTask: string; // Task to assign
+  assignedTo: string; // Store assistant name
+  progress: number; // 0-100
+  resultSummary?: string; // Feedback after execution
 }
 
 export interface Metric {

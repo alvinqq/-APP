@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle, Edit3, Clock, AlertCircle, Share2, Activity } from 'lucide-react';
+import { X, CheckCircle, Edit3, Clock, AlertCircle, Share2, Activity, History, Image as ImageIcon } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 
 interface TaskDetailsDrawerProps {
@@ -105,6 +105,53 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                 </div>
               </div>
 
+              {/* Processing Logs / History Timeline */}
+              {task.logs && task.logs.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+                     <History size={16} className="text-gray-400" />
+                     <h4 className="font-bold text-gray-800 text-sm">处理记录</h4>
+                  </div>
+                  <div className="relative pl-2">
+                    <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-100"></div>
+                    <div className="space-y-6">
+                      {task.logs.map((log) => (
+                        <div key={log.id} className="relative pl-6">
+                          {/* Timeline Dot */}
+                          <div className="absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white bg-gray-200 shadow-sm flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
+                          </div>
+                          
+                          <div className="flex flex-col gap-1">
+                             <div className="flex justify-between items-center">
+                               <span className="text-sm font-semibold text-gray-700">{log.actor}</span>
+                               <span className="text-xs text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded">{log.timestamp}</span>
+                             </div>
+                             <p className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-2 rounded-lg border border-gray-50">
+                               {log.action}
+                             </p>
+                             
+                             {/* Attachments */}
+                             {log.attachments && log.attachments.length > 0 && (
+                                <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                                    {log.attachments.map((src, idx) => (
+                                        <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 relative group">
+                                            <img src={src} alt="attachment" className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <ImageIcon size={12} className="text-white" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                             )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Business Loop Stage Visualization */}
               {task.loopStage && (
                 <div className="border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-5 rounded-2xl relative overflow-hidden">
@@ -142,7 +189,7 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                 onClick={() => onEdit(task.id)}
                 className="flex-1 py-3 px-4 bg-white border-2 border-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
               >
-                <Edit3 size={18} /> 编辑任务
+                <Edit3 size={18} /> 执行/编辑
               </button>
               <button 
                 onClick={() => onComplete(task.id)}
