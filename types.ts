@@ -1,6 +1,9 @@
 export enum UserRole {
-  STORE_MANAGER = 'STORE_MANAGER',
-  HQ_MANAGER = 'HQ_MANAGER'
+  STORE_ASSISTANT = 'STORE_ASSISTANT',       // 门店端 - 店员
+  FRANCHISEE = 'FRANCHISEE',                 // 门店端 - 加盟商
+  HQ_SPECIALIST = 'HQ_SPECIALIST',           // 总部端 - 专员
+  HQ_MARKET_MANAGER = 'HQ_MARKET_MANAGER',   // 总部端 - 市场经理
+  HQ_EXECUTIVE = 'HQ_EXECUTIVE'              // 总部端 - 总部管理
 }
 
 export enum TaskStatus {

@@ -16,7 +16,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) 
     {
       id: 'welcome',
       role: 'model',
-      text: `你好！我是绝知APP的智能助手。当前为您提供${role === UserRole.STORE_MANAGER ? '门店经营' : '总部管理'}支持。请问有什么可以帮您？`,
+      text: `你好！我是绝知APP的智能助手。当前为您提供${(role === UserRole.FRANCHISEE || role === UserRole.STORE_ASSISTANT) ? '门店经营' : '总部管理'}支持。请问有什么可以帮您？`,
       timestamp: new Date()
     }
   ]);
@@ -60,7 +60,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) 
       // Simple heuristic to detect if AI suggested a task (for demo purposes)
       if (responseText.includes("任务") || responseText.includes("Task")) {
         // In a real app, we'd use function calling JSON output
-        if (role === UserRole.STORE_MANAGER) {
+        if (role === UserRole.FRANCHISEE || role === UserRole.STORE_ASSISTANT) {
            // Simulate task extraction
            onTaskCreate("AI生成: 关注近期销售异常 (来自对话)");
         }
