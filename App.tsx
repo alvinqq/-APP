@@ -23,7 +23,12 @@ import {
   User,
   Briefcase,
   Users,
-  XCircle
+  XCircle,
+  Calendar,
+  Home,
+  MessageSquare,
+  Clock,
+  X
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -33,6 +38,7 @@ import { AIAssistant } from './components/AIAssistant';
 import { TaskDetailsDrawer } from './components/TaskDetailsDrawer';
 import { ExceptionAlertModule } from './components/ExceptionAlertModule';
 import { TaskEditModal } from './components/TaskEditModal';
+import { TaskCreateModal } from './components/TaskCreateModal';
 
 // --- MOCK DATA GENERATORS ---
 
@@ -55,18 +61,36 @@ const GENERATE_WEEKLY_DATA = (base: number) => [
   { name: 'Sun', value: base * 1.3, compliance: 93 },
 ];
 
+const TODAY = new Date().toISOString().split('T')[0];
+
+// Helper to check if date is today or tomorrow
+const isDueSoon = (dateStr?: string) => {
+  if (!dateStr) return false;
+  
+  const today = new Date();
+  const due = new Date(dateStr);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayStr = today.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const dueStr = due.toISOString().split('T')[0];
+
+  return dueStr === todayStr || dueStr === tomorrowStr;
+};
+
 // --- ROLE CONFIGURATION ---
 
 const ROLE_LABELS = {
-  [UserRole.STORE_ASSISTANT]: { label: '店员', group: '门店端', icon: User },
-  [UserRole.FRANCHISEE]: { label: '加盟商', group: '门店端', icon: Store },
-  [UserRole.HQ_SPECIALIST]: { label: '专员', group: '总部端', icon: Briefcase },
-  [UserRole.HQ_MARKET_MANAGER]: { label: '市场经理', group: '总部端', icon: Map },
-  [UserRole.HQ_EXECUTIVE]: { label: '总部管理', group: '总部端', icon: Building2 },
+  [UserRole.STORE_ASSISTANT]: { label: '店员', group: '门店', icon: User },
+  [UserRole.FRANCHISEE]: { label: '加盟商', group: '门店', icon: Store },
+  [UserRole.HQ_SPECIALIST]: { label: '专员', group: '总部', icon: Briefcase },
+  [UserRole.HQ_MARKET_MANAGER]: { label: '经理', group: '总部', icon: Map },
+  [UserRole.HQ_EXECUTIVE]: { label: '管理', group: '总部', icon: Building2 },
 };
 
 // --- DATA MAPPING BY ROLE ---
-
+// (Kept same as before)
 const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
   [UserRole.STORE_ASSISTANT]: [
     { 
@@ -76,6 +100,7 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       priority: 'high', 
       status: TaskStatus.PENDING, 
       timestamp: '07:50', 
+      dueDate: TODAY,
       source: 'MANUAL', 
       loopStage: 0,
       logs: [
@@ -89,6 +114,7 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       priority: 'medium', 
       status: TaskStatus.IN_PROGRESS, 
       timestamp: '08:10', 
+      dueDate: TODAY,
       source: 'AI_GENERATED', 
       loopStage: 5,
       logs: [
@@ -102,7 +128,8 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       description: '检查后厨半成品效期标签', 
       priority: 'low', 
       status: TaskStatus.PENDING, 
-      timestamp: '14:00', 
+      timestamp: '14:00',
+      dueDate: TODAY, 
       source: 'MANUAL', 
       loopStage: 0,
       logs: [
@@ -118,6 +145,7 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       priority: 'high', 
       status: TaskStatus.PENDING, 
       timestamp: '09:00', 
+      dueDate: TODAY,
       source: 'AI_GENERATED', 
       loopStage: 4,
       logs: [
@@ -132,6 +160,7 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       priority: 'medium', 
       status: TaskStatus.IN_PROGRESS, 
       timestamp: '10:30', 
+      dueDate: TODAY,
       source: 'MANUAL', 
       loopStage: 0,
       logs: [
@@ -146,6 +175,7 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       priority: 'high', 
       status: TaskStatus.PENDING, 
       timestamp: '22:00', 
+      dueDate: TODAY,
       source: 'AI_GENERATED', 
       loopStage: 5,
       logs: [
@@ -154,16 +184,16 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
     },
   ],
   [UserRole.HQ_SPECIALIST]: [
-    { id: 'hs-1', title: '门店工单处理 (ID: 9527)', description: '协助处理上海南京路店POS机故障报修', priority: 'high', status: TaskStatus.IN_PROGRESS, timestamp: '08:45', source: 'MANUAL', loopStage: 0, logs: [] },
-    { id: 'hs-2', title: '新品物料配送追踪', description: '追踪“藤椒系列”物料在华东仓的入库情况', priority: 'medium', status: TaskStatus.PENDING, timestamp: '09:30', source: 'AI_GENERATED', loopStage: 2, logs: [] },
+    { id: 'hs-1', title: '门店工单处理 (ID: 9527)', description: '协助处理上海南京路店POS机故障报修', priority: 'high', status: TaskStatus.IN_PROGRESS, timestamp: '08:45', dueDate: TODAY, source: 'MANUAL', loopStage: 0, logs: [] },
+    { id: 'hs-2', title: '新品物料配送追踪', description: '追踪“藤椒系列”物料在华东仓的入库情况', priority: 'medium', status: TaskStatus.PENDING, timestamp: '09:30', dueDate: TODAY, source: 'AI_GENERATED', loopStage: 2, logs: [] },
   ],
   [UserRole.HQ_MARKET_MANAGER]: [
-    { id: 'mm-1', title: '华南区合规巡检', description: '本周重点巡检广州天河区 5 家 B 类门店', priority: 'high', status: TaskStatus.PENDING, timestamp: '09:00', source: 'AI_GENERATED', loopStage: 5, logs: [] },
-    { id: 'mm-2', title: '区域月度经营会议', description: '准备华东区 10 月份经营分析报告', priority: 'medium', status: TaskStatus.PENDING, timestamp: '14:00', source: 'MANUAL', loopStage: 0, logs: [] },
+    { id: 'mm-1', title: '华南区合规巡检', description: '本周重点巡检广州天河区 5 家 B 类门店', priority: 'high', status: TaskStatus.PENDING, timestamp: '09:00', dueDate: TODAY, source: 'AI_GENERATED', loopStage: 5, logs: [] },
+    { id: 'mm-2', title: '区域月度经营会议', description: '准备华东区 10 月份经营分析报告', priority: 'medium', status: TaskStatus.PENDING, timestamp: '14:00', dueDate: TODAY, source: 'MANUAL', loopStage: 0, logs: [] },
   ],
   [UserRole.HQ_EXECUTIVE]: [
-    { id: 'he-1', title: 'Q4 战略目标调整', description: '基于 Q3 财报数据，审批市场部提交的 Q4 预算调整案', priority: 'high', status: TaskStatus.PENDING, timestamp: '10:00', source: 'AI_GENERATED', loopStage: 3, logs: [] },
-    { id: 'he-2', title: '食品安全危机预案演练', description: '发起全集团食品安全应急响应测试', priority: 'low', status: TaskStatus.VERIFIED, timestamp: '16:00', source: 'MANUAL', loopStage: 0, logs: [] },
+    { id: 'he-1', title: 'Q4 战略目标调整', description: '基于 Q3 财报数据，审批市场部提交的 Q4 预算调整案', priority: 'high', status: TaskStatus.PENDING, timestamp: '10:00', dueDate: TODAY, source: 'AI_GENERATED', loopStage: 3, logs: [] },
+    { id: 'he-2', title: '食品安全危机预案演练', description: '发起全集团食品安全应急响应测试', priority: 'low', status: TaskStatus.VERIFIED, timestamp: '16:00', dueDate: TODAY, source: 'MANUAL', loopStage: 0, logs: [] },
   ]
 };
 
@@ -205,11 +235,11 @@ const MOCK_ALERTS: ExceptionAlert[] = [
 // --- SUB-COMPONENTS ---
 
 const StatCard = ({ title, value, trend, subtext, highlight = false }: { title: string, value: string, trend?: string, subtext?: string, highlight?: boolean }) => (
-  <div className={`p-5 rounded-2xl border transition-all duration-200 hover:shadow-md ${highlight ? 'bg-gradient-to-br from-red-600 to-red-700 text-white border-transparent' : 'bg-white border-gray-100'}`}>
+  <div className={`p-4 rounded-xl border transition-all duration-200 ${highlight ? 'bg-gradient-to-br from-red-600 to-red-700 text-white border-transparent' : 'bg-white border-gray-100'}`}>
     <div className="flex justify-between items-start mb-2">
-      <h3 className={`text-sm font-medium ${highlight ? 'text-red-100' : 'text-gray-500'}`}>{title}</h3>
+      <h3 className={`text-xs font-medium ${highlight ? 'text-red-100' : 'text-gray-500'}`}>{title}</h3>
       {trend && (
-        <span className={`text-xs px-2 py-0.5 rounded-full ${
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
           trend === 'neutral'
              ? (highlight ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600')
              : trend.startsWith('+') 
@@ -220,8 +250,8 @@ const StatCard = ({ title, value, trend, subtext, highlight = false }: { title: 
         </span>
       )}
     </div>
-    <div className="text-2xl font-bold mb-1">{value}</div>
-    {subtext && <div className={`text-xs ${highlight ? 'text-red-200' : 'text-gray-400'}`}>{subtext}</div>}
+    <div className="text-xl font-bold mb-1">{value}</div>
+    {subtext && <div className={`text-[10px] ${highlight ? 'text-red-200' : 'text-gray-400'}`}>{subtext}</div>}
   </div>
 );
 
@@ -230,45 +260,55 @@ interface TaskItemProps {
   onClick: () => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, onClick }) => (
-  <div onClick={onClick} className={`flex items-center p-4 bg-white border rounded-xl hover:bg-gray-50 cursor-pointer group transition-colors ${task.status === TaskStatus.REJECTED ? 'border-red-100 opacity-70' : 'border-gray-100'}`}>
-    <div className={`w-2 h-12 rounded-full mr-4 ${
-      task.status === TaskStatus.REJECTED ? 'bg-gray-300' :
-      task.priority === 'high' ? 'bg-red-500' : 
-      task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
-    }`} />
-    <div className="flex-1">
-      <div className="flex justify-between mb-1">
-        <h4 className={`font-semibold ${task.status === TaskStatus.REJECTED ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{task.title}</h4>
-        <span className="text-xs text-gray-400">{task.timestamp}</span>
+const TaskItem: React.FC<TaskItemProps> = ({ task, onClick }) => {
+  const dueSoon = (task.status === TaskStatus.PENDING || task.status === TaskStatus.IN_PROGRESS) && isDueSoon(task.dueDate);
+
+  return (
+    <div onClick={onClick} className={`flex items-start p-3 bg-white border rounded-xl active:bg-gray-50 cursor-pointer group transition-colors ${task.status === TaskStatus.REJECTED ? 'border-red-100 opacity-70' : dueSoon ? 'border-orange-200 bg-orange-50/30' : 'border-gray-100'}`}>
+      <div className={`w-1.5 h-1.5 mt-2 rounded-full mr-3 flex-shrink-0 ${
+        task.status === TaskStatus.REJECTED ? 'bg-gray-300' :
+        task.priority === 'high' ? 'bg-red-500' : 
+        task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
+      }`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start mb-0.5">
+          <h4 className={`font-semibold text-sm truncate pr-2 ${task.status === TaskStatus.REJECTED ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{task.title}</h4>
+          <span className="text-[10px] text-gray-400 whitespace-nowrap">{task.timestamp}</span>
+        </div>
+        <p className="text-xs text-gray-500 line-clamp-1 mb-2">{task.description}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {task.source === 'AI_GENERATED' && (
+            <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded flex items-center gap-1">
+              <Store size={10} /> AI
+            </span>
+          )}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+            task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-700' : 
+            task.status === TaskStatus.VERIFIED ? 'bg-blue-100 text-blue-700' :
+            task.status === TaskStatus.PENDING_VERIFICATION ? 'bg-orange-100 text-orange-700' :
+            task.status === TaskStatus.REJECTED ? 'bg-gray-100 text-gray-500' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {task.status === TaskStatus.PENDING ? '待处理' : 
+              task.status === TaskStatus.IN_PROGRESS ? '进行中' : 
+              task.status === TaskStatus.PENDING_VERIFICATION ? '待验证' : 
+              task.status === TaskStatus.VERIFIED ? '已验证' : 
+              task.status === TaskStatus.REJECTED ? '已拒绝' : '已完成'}
+          </span>
+            {task.dueDate && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${dueSoon ? 'bg-orange-100 text-orange-700 font-semibold' : 'bg-gray-50 text-gray-500'}`}>
+                  <Calendar size={10} /> 
+                  {dueSoon ? '即将到期' : new Date(task.dueDate).toLocaleDateString(undefined, {month: 'numeric', day: 'numeric'})}
+              </span>
+          )}
+        </div>
       </div>
-      <p className="text-sm text-gray-500 line-clamp-1">{task.description}</p>
-      <div className="flex items-center gap-2 mt-2">
-         {task.source === 'AI_GENERATED' && (
-           <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded flex items-center gap-1">
-             <Store size={10} /> AI下发
-           </span>
-         )}
-         <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-           task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-700' : 
-           task.status === TaskStatus.VERIFIED ? 'bg-blue-100 text-blue-700' :
-           task.status === TaskStatus.PENDING_VERIFICATION ? 'bg-orange-100 text-orange-700' :
-           task.status === TaskStatus.REJECTED ? 'bg-gray-100 text-gray-500' :
-           'bg-gray-100 text-gray-600'
-         }`}>
-           {task.status === TaskStatus.PENDING ? '待处理' : 
-             task.status === TaskStatus.IN_PROGRESS ? '进行中' : 
-             task.status === TaskStatus.PENDING_VERIFICATION ? '待验证' : 
-             task.status === TaskStatus.VERIFIED ? '已验证' : 
-             task.status === TaskStatus.REJECTED ? '已拒绝' : '已完成'}
-         </span>
-      </div>
+      {dueSoon && (
+        <div className="ml-2 mt-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+      )}
     </div>
-    <div className="text-gray-300 group-hover:text-red-600">
-      <MoreHorizontal size={20} />
-    </div>
-  </div>
-);
+  );
+};
 
 // --- MAIN APP COMPONENT ---
 
@@ -282,6 +322,9 @@ export default function App() {
   const [alerts, setAlerts] = useState<ExceptionAlert[]>(MOCK_ALERTS);
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('home');
+  const [showDueWarning, setShowDueWarning] = useState(false);
 
   // Switch tasks when role changes
   useEffect(() => {
@@ -290,6 +333,22 @@ export default function App() {
     setActiveLoopStage(0);
     setTaskFilter('active'); // Reset filter on role change
   }, [role]);
+
+  // Check for Due Soon tasks
+  useEffect(() => {
+    // Only check active tasks
+    const activeTasks = tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS);
+    const hasUrgentTasks = activeTasks.some(t => isDueSoon(t.dueDate));
+
+    if (hasUrgentTasks) {
+      setShowDueWarning(true);
+      // Auto hide notification after 5 seconds to be subtle
+      const timer = setTimeout(() => setShowDueWarning(false), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowDueWarning(false);
+    }
+  }, [tasks]);
 
   // Simulation for the "Closed Loop" Process
   useEffect(() => {
@@ -302,7 +361,7 @@ export default function App() {
           clearInterval(interval);
           setSimulateLoop(false);
           setActiveLoopStage(0);
-          addTask("AI预警优化完成");
+          addTask({title: "AI预警优化完成"});
         } else {
           setActiveLoopStage(stage);
         }
@@ -311,22 +370,23 @@ export default function App() {
     }
   }, [simulateLoop]);
 
-  const addTask = (title: string) => {
+  const addTask = (taskData: Partial<Task>) => {
     const newTask: Task = {
       id: Date.now().toString(),
-      title: title,
-      description: 'AI助手自动生成的任务项。',
-      priority: 'medium',
+      title: taskData.title || '新任务',
+      description: taskData.description || 'AI助手自动生成的任务项。',
+      priority: taskData.priority || 'medium',
+      dueDate: taskData.dueDate || new Date().toISOString().split('T')[0],
       status: TaskStatus.PENDING,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      source: 'AI_GENERATED',
-      loopStage: 5,
+      source: taskData.source || 'AI_GENERATED',
+      loopStage: taskData.source === 'AI_GENERATED' ? 5 : 0,
       logs: [
         { 
           id: Date.now().toString() + '-log', 
-          actor: 'AI助手', 
+          actor: taskData.source === 'AI_GENERATED' ? 'AI助手' : '当前用户', 
           timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
-          action: '基于预警规则自动生成任务' 
+          action: taskData.source === 'AI_GENERATED' ? '基于预警规则自动生成任务' : '创建了新任务' 
         }
       ]
     };
@@ -352,18 +412,7 @@ export default function App() {
           logs: [...(t.logs || []), completionLog]
       } : t
     ));
-    
-    // Also update selectedTask
-    setSelectedTask(prev => {
-        if (prev && prev.id === taskId) {
-            return {
-                ...prev,
-                status: TaskStatus.COMPLETED,
-                logs: [...(prev.logs || []), completionLog]
-            };
-        }
-        return prev;
-    });
+    setSelectedTask(prev => prev && prev.id === taskId ? { ...prev, status: TaskStatus.COMPLETED, logs: [...(prev.logs || []), completionLog] } : prev);
   };
 
   const handleTaskReject = (taskId: string) => {
@@ -373,26 +422,8 @@ export default function App() {
         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
         action: '拒绝了任务（任务已驳回）'
     };
-    
-    setTasks(prev => prev.map(t => 
-      t.id === taskId ? { 
-          ...t, 
-          status: TaskStatus.REJECTED,
-          logs: [...(t.logs || []), rejectLog]
-      } : t
-    ));
-
-    // Update selected task to reflect changes immediately
-    setSelectedTask(prev => {
-        if (prev && prev.id === taskId) {
-            return {
-                ...prev,
-                status: TaskStatus.REJECTED,
-                logs: [...(prev.logs || []), rejectLog]
-            };
-        }
-        return prev;
-    });
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: TaskStatus.REJECTED, logs: [...(t.logs || []), rejectLog] } : t));
+    setSelectedTask(prev => prev && prev.id === taskId ? { ...prev, status: TaskStatus.REJECTED, logs: [...(prev.logs || []), rejectLog] } : prev);
   };
 
   const handleTaskAccept = (taskId: string) => {
@@ -402,105 +433,46 @@ export default function App() {
         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
         action: '接收了任务，开始执行'
     };
-
-    setTasks(prev => prev.map(t => 
-      t.id === taskId ? { 
-          ...t, 
-          status: TaskStatus.IN_PROGRESS,
-          logs: [...(t.logs || []), acceptLog]
-      } : t
-    ));
-
-    // Update selected task to reflect changes immediately
-    setSelectedTask(prev => {
-        if (prev && prev.id === taskId) {
-            return {
-                ...prev,
-                status: TaskStatus.IN_PROGRESS,
-                logs: [...(prev.logs || []), acceptLog]
-            };
-        }
-        return prev;
-    });
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: TaskStatus.IN_PROGRESS, logs: [...(t.logs || []), acceptLog] } : t));
+    setSelectedTask(prev => prev && prev.id === taskId ? { ...prev, status: TaskStatus.IN_PROGRESS, logs: [...(prev.logs || []), acceptLog] } : prev);
   };
 
   const handleTaskEdit = (taskId: string) => {
     setIsEditModalOpen(true);
   };
 
-  const handleTaskUpdate = (taskId: string, actionText: string, attachments: string[], newStatus: TaskStatus) => {
+  const handleTaskUpdate = (taskId: string, actionText: string, attachments: string[], newStatus: TaskStatus, newDueDate?: string) => {
     const newLog: TaskActionLog = {
       id: Date.now().toString(),
       actor: '当前用户',
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      action: `完成任务处理: ${actionText}`,
+      action: `完成任务处理: ${actionText}` + (newDueDate ? ` (截止日期更新为 ${newDueDate})` : ''),
       attachments: attachments
     };
 
-    // Update task with new status and also update loopStage to 6 (Execution Feedback) if it's an AI task
-    setTasks(prev => prev.map(t => 
-      t.id === taskId ? { 
-          ...t, 
-          status: newStatus,
-          loopStage: (t.loopStage && t.loopStage > 0) ? 6 : t.loopStage, // Move to 'Execution Feedback' (Stage 6)
-          logs: [...(t.logs || []), newLog]
-      } : t
-    ));
-
-    // Update selected task to reflect changes immediately in drawer
-    setSelectedTask(prev => {
-      if (prev && prev.id === taskId) {
-        return {
-          ...prev,
-          status: newStatus,
-          loopStage: (prev.loopStage && prev.loopStage > 0) ? 6 : prev.loopStage,
-          logs: [...(prev.logs || []), newLog]
-        };
-      }
-      return prev;
-    });
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, dueDate: newDueDate || t.dueDate, loopStage: (t.loopStage && t.loopStage > 0) ? 6 : t.loopStage, logs: [...(t.logs || []), newLog] } : t));
+    setSelectedTask(prev => prev && prev.id === taskId ? { ...prev, status: newStatus, dueDate: newDueDate || prev.dueDate, loopStage: (prev.loopStage && prev.loopStage > 0) ? 6 : prev.loopStage, logs: [...(prev.logs || []), newLog] } : prev);
   };
 
   const handleAiVerify = (taskId: string) => {
-    // 模拟AI验证 (Simulate AI Verification)
-    // 随机通过或不通过 (80% pass rate)
     const isPass = Math.random() > 0.2; 
-    
     const verificationLog: TaskActionLog = {
         id: Date.now().toString(),
         actor: 'AI鉴赏家',
         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        action: isPass 
-            ? 'AI视觉验证通过：任务完成质量符合标准 (Confidence: 98%)' 
-            : 'AI视觉验证不通过：现场照片模糊或未达到SOP要求，已驳回重新处理。'
+        action: isPass ? 'AI视觉验证通过：任务完成质量符合标准 (Confidence: 98%)' : 'AI视觉验证不通过：现场照片模糊或未达到SOP要求，已驳回重新处理。'
     };
 
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t;
-
-      // Logic for Loop Stage Update:
-      // Pass -> Stage 7 (Effect Verification / Completed)
-      // Fail -> Back to Stage 5 (Generate Task/Execution Needed) to retry
       const newStage = (t.loopStage && t.loopStage > 0) ? (isPass ? 7 : 5) : t.loopStage;
-
-      return { 
-          ...t, 
-          status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING, // Pass -> Completed, Fail -> Pending
-          loopStage: newStage, 
-          logs: [...(t.logs || []), verificationLog]
-      };
+      return { ...t, status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING, loopStage: newStage, logs: [...(t.logs || []), verificationLog] };
     }));
 
-    // Update selected task immediately
     setSelectedTask(prev => {
         if (prev && prev.id === taskId) {
             const newStage = (prev.loopStage && prev.loopStage > 0) ? (isPass ? 7 : 5) : prev.loopStage;
-            return {
-                ...prev,
-                status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING,
-                loopStage: newStage,
-                logs: [...(prev.logs || []), verificationLog]
-            };
+            return { ...prev, status: isPass ? TaskStatus.COMPLETED : TaskStatus.PENDING, loopStage: newStage, logs: [...(prev.logs || []), verificationLog] };
         }
         return prev;
     });
@@ -510,30 +482,18 @@ export default function App() {
     setRole(e.target.value as UserRole);
   };
 
-  // --- EXCEPTION ALERT HANDLERS ---
   const handleAssignTask = (alertId: string) => {
-    // 1. Update Alert Status
-    setAlerts(prev => prev.map(a => 
-      a.id === alertId ? { ...a, status: 'assigned', progress: 0 } : a
-    ));
-
-    // 2. Simulate Task creation visible in Task List (optional, but good for demo)
+    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'assigned', progress: 0 } : a));
     const alertItem = alerts.find(a => a.id === alertId);
-    if (alertItem) {
-        addTask(`[异常处理] ${alertItem.recommendedTask}`);
-    }
+    if (alertItem) addTask({title: `[异常处理] ${alertItem.recommendedTask}`});
 
-    // 3. Simulate Progress (Demo only)
     let progress = 0;
     const interval = setInterval(() => {
       progress += 20;
       setAlerts(prev => prev.map(a => {
          if (a.id !== alertId) return a;
-         // Transition to processing
          if (progress === 20 && a.status === 'assigned') return { ...a, status: 'processing', progress };
-         // Update progress
          if (progress < 100) return { ...a, progress };
-         // Done
          clearInterval(interval);
          return { ...a, status: 'pending_verification', progress: 100, resultSummary: '已完成物料补充，更换了展示牌。' };
       }));
@@ -541,306 +501,188 @@ export default function App() {
   };
 
   const handleVerifyAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(a => 
-      a.id === alertId ? { ...a, status: 'resolved' } : a
-    ));
+    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'resolved' } : a));
   };
 
-
-  // Helper to get Chart Data based on role
-  const getChartData = () => {
-    if (role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) {
-      return GENERATE_HOURLY_DATA(role === UserRole.FRANCHISEE ? 5000 : 3000);
-    }
-    return GENERATE_WEEKLY_DATA(role === UserRole.HQ_EXECUTIVE ? 1000000 : 500000);
-  };
-
-  const chartData = getChartData();
+  const chartData = (role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) 
+    ? GENERATE_HOURLY_DATA(role === UserRole.FRANCHISEE ? 5000 : 3000)
+    : GENERATE_WEEKLY_DATA(role === UserRole.HQ_EXECUTIVE ? 1000000 : 500000);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+    <div className="w-full max-w-[430px] mx-auto bg-[#F8FAFC] min-h-screen sm:my-8 sm:rounded-[32px] sm:shadow-2xl sm:border-[8px] sm:border-gray-800 relative overflow-hidden flex flex-col font-sans">
+      
+      {/* --- IN-APP NOTIFICATION TOAST --- */}
+      {showDueWarning && (
+        <div className="absolute top-16 left-4 right-4 z-50 bg-orange-500 text-white p-3 rounded-xl shadow-lg shadow-orange-200 animate-in slide-in-from-top-4 duration-300 flex items-start gap-3">
+          <div className="bg-white/20 p-1.5 rounded-full">
+            <Clock size={16} />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-bold text-sm">任务临期提醒</h4>
+            <p className="text-xs text-orange-50 mt-0.5">你有待办任务将在 24 小时内截止，请及时处理。</p>
+          </div>
+          <button 
+            onClick={() => setShowDueWarning(false)} 
+            className="text-white/60 hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* --- HEADER --- */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-red-200">
-              绝
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 hidden lg:block">
-              绝知APP <span className="text-gray-400 font-light text-sm">| 智能商业超级助手 V4.1</span>
-            </h1>
-          </div>
-
-          <div className="flex-1 max-w-md mx-4 hidden md:block">
-            <div className="relative group">
-              <Search className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-red-600 transition-colors" size={20} />
-              <input 
-                type="text" 
-                placeholder="搜索任务、门店、指标或唤起AI..." 
-                className="w-full bg-gray-100 border-transparent focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-100 rounded-full py-2 pl-10 pr-4 transition-all duration-200 outline-none text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Expanded Role Switcher */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                {React.createElement(ROLE_LABELS[role].icon, { size: 14 })}
-              </div>
+      <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 sticky top-0 px-4 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+           <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-red-200">绝</div>
+           <div className="flex flex-col">
+             <span className="text-sm font-bold text-gray-900 leading-tight">绝知APP</span>
+             <span className="text-[10px] text-gray-400">V4.1 移动版</span>
+           </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+           {/* Compact Role Switcher */}
+           <div className="relative">
               <select 
                 value={role} 
                 onChange={handleRoleChange}
-                className="pl-9 pr-8 py-1.5 bg-gray-100 border-none rounded-lg text-sm font-medium text-gray-700 focus:ring-2 focus:ring-red-100 focus:bg-white transition-all cursor-pointer appearance-none"
-                style={{ backgroundImage: 'none' }}
+                className="w-24 bg-gray-100 rounded-full text-[10px] font-medium text-gray-700 py-1 pl-2 pr-6 appearance-none focus:outline-none focus:ring-1 focus:ring-red-500"
               >
-                <optgroup label="门店端">
-                  <option value={UserRole.STORE_ASSISTANT}>门店端 - 店员</option>
-                  <option value={UserRole.FRANCHISEE}>门店端 - 加盟商</option>
+                <optgroup label="门店">
+                  <option value={UserRole.STORE_ASSISTANT}>店员</option>
+                  <option value={UserRole.FRANCHISEE}>加盟商</option>
                 </optgroup>
-                <optgroup label="总部端">
-                  <option value={UserRole.HQ_SPECIALIST}>总部端 - 专员</option>
-                  <option value={UserRole.HQ_MARKET_MANAGER}>总部端 - 市场经理</option>
-                  <option value={UserRole.HQ_EXECUTIVE}>总部端 - 总部管理</option>
+                <optgroup label="总部">
+                  <option value={UserRole.HQ_SPECIALIST}>专员</option>
+                  <option value={UserRole.HQ_MARKET_MANAGER}>经理</option>
+                  <option value={UserRole.HQ_EXECUTIVE}>高管</option>
                 </optgroup>
               </select>
-              <ChevronDown className="absolute right-2 top-2.5 text-gray-400 pointer-events-none" size={14} />
-            </div>
-            
-            <button className="relative text-gray-500 hover:text-gray-700">
-              <Bell size={24} />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-            
-            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
-               <img src="https://picsum.photos/100/100" alt="User" />
-            </div>
-          </div>
+              <ChevronDown className="absolute right-2 top-1.5 text-gray-500 pointer-events-none" size={12} />
+           </div>
+
+           <button className="relative text-gray-500">
+             <Bell size={20} />
+             {showDueWarning && (
+                <span className="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full border-2 border-white animate-pulse"></span>
+             )}
+           </button>
+           
+           <div className="w-7 h-7 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
+              <img src="https://picsum.photos/100/100" alt="User" />
+           </div>
         </div>
       </header>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+      {/* --- SCROLLABLE CONTENT --- */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 pb-24 no-scrollbar">
         
-        {/* TOP STATUS BAR: CORE LOOP VISUALIZER (Shared but maybe simplified for some roles) */}
+        {/* Status Bar / Loop */}
         {role !== UserRole.STORE_ASSISTANT && (
-          activeLoopStage > 0 ? (
-             <ProcessFlow currentStage={activeLoopStage} />
-          ) : (
-             <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 flex items-center justify-between border border-red-100">
-               <div className="flex items-center gap-3">
-                 <div className="bg-white p-2 rounded-lg shadow-sm text-red-600">
-                   <Building2 size={24} />
+          <div className="transform scale-95 origin-center w-full">
+            {activeLoopStage > 0 ? (
+               <ProcessFlow currentStage={activeLoopStage} />
+            ) : (
+               <div className="bg-white rounded-xl p-3 flex items-center justify-between border border-red-50 shadow-sm">
+                 <div className="flex items-center gap-2">
+                   <div className="bg-red-50 p-1.5 rounded-lg text-red-600"><Building2 size={16} /></div>
+                   <div className="text-xs text-gray-500">系统运行正常</div>
                  </div>
-                 <div>
-                   <h2 className="font-semibold text-gray-800">全域系统运行正常</h2>
-                   <p className="text-sm text-gray-500">Task Engine 实时监控中 • {ROLE_LABELS[role].group}视角</p>
-                 </div>
+                 <button onClick={triggerDataAlert} className="text-[10px] px-2 py-1 bg-red-50 text-red-600 rounded border border-red-100">模拟异常</button>
                </div>
-               <button 
-                 onClick={triggerDataAlert}
-                 className="px-4 py-2 bg-white text-red-600 text-sm font-medium rounded-lg border border-red-100 hover:bg-red-50 transition-colors shadow-sm"
-               >
-                 模拟异常预警
-               </button>
-             </div>
-          )
-        )}
-
-        {/* --- ROLE SPECIFIC MODULES --- */}
-
-        {/* FRANCHISEE: EXCEPTION ALERT MODULE */}
-        {role === UserRole.FRANCHISEE && (
-          <div className="mb-6">
-            <ExceptionAlertModule 
-              alerts={alerts}
-              onAssignTask={handleAssignTask}
-              onVerify={handleVerifyAlert}
-            />
+            )}
           </div>
         )}
 
-        {/* STORE ASSISTANT: OPENING TASK FLOW */}
-        {role === UserRole.STORE_ASSISTANT && (
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-500 slide-in-from-bottom-2">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <ClipboardList size={20} className="text-red-600" />
-                店员开店智能任务流
-              </h3>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Sun size={14} className="text-orange-500" />
-                <span>当前进度: {openingStep + 1}/{OPENING_STEPS.length}</span>
-              </div>
-            </div>
-            
-            <div className="relative">
-              {/* Progress Line */}
-              <div className="absolute top-5 left-0 w-full h-1 bg-gray-100 rounded-full z-0">
-                 <div 
-                   className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
-                   style={{ width: `${(openingStep / (OPENING_STEPS.length - 1)) * 100}%` }}
-                 />
+        {/* --- DYNAMIC DASHBOARD --- */}
+        {activeTab === 'home' && (
+           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              
+              {/* Modules based on Role */}
+              {role === UserRole.FRANCHISEE && (
+                <ExceptionAlertModule alerts={alerts} onAssignTask={handleAssignTask} onVerify={handleVerifyAlert} />
+              )}
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                  {role === UserRole.STORE_ASSISTANT && (
+                    <>
+                      <StatCard title="订单收入" value="¥1,208" trend="+5.2%" />
+                      <StatCard title="待办任务" value="3" trend="neutral" />
+                    </>
+                  )}
+                  {role === UserRole.FRANCHISEE && (
+                    <>
+                      <StatCard title="订单实收" value="¥12,840" trend="+12%" highlight />
+                      <StatCard title="订单量" value="302" trend="+15" />
+                    </>
+                  )}
+                  {(role !== UserRole.STORE_ASSISTANT && role !== UserRole.FRANCHISEE) && (
+                     <>
+                      <StatCard title="核心指标" value="98.5%" trend="+1.2%" highlight />
+                      <StatCard title="异常工单" value="12" trend="-5%" />
+                     </>
+                  )}
               </div>
 
-              {/* Steps */}
-              <div className="relative z-10 flex justify-between">
-                {OPENING_STEPS.map((step, index) => {
-                  const isCompleted = index <= openingStep;
-                  const isCurrent = index === openingStep;
-                  const Icon = step.icon;
-
-                  return (
-                    <div 
-                      key={step.id} 
-                      className="flex flex-col items-center gap-3 cursor-pointer group"
-                      onClick={() => setOpeningStep(index)} // For demo interaction
-                    >
-                      <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                        ${isCompleted 
-                          ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-100' 
-                          : 'bg-white border-gray-200 text-gray-400 group-hover:border-red-200'}
-                        ${isCurrent ? 'ring-4 ring-red-50 scale-110' : ''}
-                      `}>
-                         {isCompleted && !isCurrent ? <Check size={18} /> : <Icon size={18} />}
-                      </div>
-                      <div className="text-center">
-                        <div className={`text-xs font-bold mb-0.5 ${isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>
-                          {step.label}
-                        </div>
-                        <div className="text-[10px] text-gray-400 font-mono">
-                          {step.time}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Chart */}
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                    <TrendingUp size={16} className="text-red-600" />
+                    {(role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) ? '实时客流' : '业务趋势'}
+                  </h3>
+                </div>
+                <div className="h-40 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#DC2626" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" hide />
+                      <Tooltip contentStyle={{borderRadius: '8px', fontSize: '12px'}} />
+                      <Area type="monotone" dataKey="value" stroke="#DC2626" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* MARKET MANAGER: REGIONAL DASHBOARD */}
-        {role === UserRole.HQ_MARKET_MANAGER && (
-           <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-500 slide-in-from-bottom-2">
-             <div className="flex justify-between items-center mb-4">
-               <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                 <Map size={20} className="text-red-600" />
-                 战区实时大屏
-               </h3>
-               <div className="flex gap-2">
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1"><CheckCircle size={10} /> 华东: 正常</span>
-                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded flex items-center gap-1"><AlertTriangle size={10} /> 华南: 预警</span>
-               </div>
-             </div>
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { region: '华东战区', value: '98%', label: '营运合规率', status: 'good' },
-                  { region: '华北战区', value: '96%', label: '营运合规率', status: 'good' },
-                  { region: '华南战区', value: '85%', label: '营运合规率', status: 'alert' },
-                  { region: '西南战区', value: '92%', label: '营运合规率', status: 'good' }
-                ].map((item, idx) => (
-                  <div key={item.region} className={`p-4 rounded-xl border ${item.status === 'alert' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} hover:shadow-md transition-shadow`}>
-                     <div className="flex justify-between items-start mb-2">
-                        <span className={`font-bold ${item.status === 'alert' ? 'text-red-800' : 'text-gray-700'}`}>{item.region}</span>
-                        {item.status === 'alert' && <AlertTriangle size={14} className="text-red-500" />}
-                     </div>
-                     <div className={`text-2xl font-bold mb-1 ${item.status === 'alert' ? 'text-red-600' : 'text-gray-900'}`}>{item.value}</div>
-                     <div className="text-xs text-gray-500">{item.label}</div>
+               {/* AI Insight */}
+               <div className="bg-gray-900 p-4 rounded-2xl text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full blur-[40px] opacity-20"></div>
+                  <div className="relative z-10">
+                    <h3 className="text-sm font-bold mb-1 flex items-center gap-2">
+                      <Sparkles size={14} className="text-yellow-400" /> 智能洞察
+                    </h3>
+                    <p className="text-gray-300 text-xs leading-relaxed line-clamp-2">
+                      {role === UserRole.STORE_ASSISTANT ? "今日早班效率提升 10%，请继续保持。" : "华东仓物流延误风险已解除，请关闭相关预警工单。"}
+                    </p>
                   </div>
-                ))}
-             </div>
+               </div>
            </div>
         )}
 
-        {/* --- METRICS & TASKS GRID --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* LEFT COLUMN: METRICS & TASKS (SWAPPED HERE) */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-in fade-in duration-500">
-              
-              {/* Dynamic Metrics based on Role */}
-              {role === UserRole.STORE_ASSISTANT && (
-                <>
-                  <StatCard title="订单收入" value="¥1,208" trend="+5.2%" />
-                  <StatCard title="待办任务" value="3" trend="neutral" />
-                  <StatCard title="个人预估收入" value="¥185" trend="+8%" />
-                  <StatCard title="门店活动数" value="2" trend="neutral" highlight />
-                </>
-              )}
-              {role === UserRole.FRANCHISEE && (
-                <>
-                  <StatCard title="订单实收" value="¥12,840" trend="+12%" highlight />
-                  <StatCard title="订单量" value="302" trend="+15" subtext="高于区域平均" />
-                  <StatCard title="毛利率" value="62.5%" trend="-1.2%" />
-                  <StatCard title="客单价" value="¥42.5" trend="+1.5%" />
-                </>
-              )}
-              {role === UserRole.HQ_SPECIALIST && (
-                <>
-                  <StatCard title="待处理工单" value="12" trend="-5%" highlight />
-                  <StatCard title="今日已闭环" value="28" trend="+10%" />
-                  <StatCard title="SLA达标率" value="99.2%" trend="neutral" />
-                  <StatCard title="异常预警" value="3" trend="+1" />
-                </>
-              )}
-              {role === UserRole.HQ_MARKET_MANAGER && (
-                <>
-                  <StatCard title="区域总营收" value="¥4.2M" trend="+8.5%" highlight />
-                  <StatCard title="门店覆盖率" value="100%" trend="neutral" />
-                  <StatCard title="合规巡检" value="45/50" subtext="本周进度" />
-                  <StatCard title="拓店目标" value="85%" trend="+5%" />
-                </>
-              )}
-              {role === UserRole.HQ_EXECUTIVE && (
-                <>
-                  <StatCard title="集团总营收" value="¥128M" trend="+15%" highlight />
-                  <StatCard title="商品SKU数" value="3,240" trend="+12" />
-                  <StatCard title="净利润率" value="22%" trend="+1.2%" />
-                  <StatCard title="活跃会员" value="2.5M" trend="+8%" />
-                </>
-              )}
-            </div>
-
-            {/* Task List (Moved Here - Swapped) */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
-              <div className="flex items-center gap-6 mb-4 border-b border-gray-100 pb-2">
+        {activeTab === 'tasks' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
                 <button 
                   onClick={() => setTaskFilter('active')}
-                  className={`relative font-bold text-sm flex items-center gap-2 pb-2 transition-colors ${
-                    taskFilter === 'active' ? 'text-gray-800' : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${taskFilter === 'active' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border'}`}
                 >
-                  <LayoutDashboard size={18} className={taskFilter === 'active' ? "text-red-600" : "text-gray-400"} />
-                  {role === UserRole.HQ_SPECIALIST ? '待处理' : '待办任务'}
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    taskFilter === 'active' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length}
-                  </span>
-                  {taskFilter === 'active' && <div className="absolute bottom-[-9px] left-0 w-full h-0.5 bg-red-600 rounded-t-full"></div>}
+                   待办 ({tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length})
                 </button>
-
                 <button 
                   onClick={() => setTaskFilter('completed')}
-                  className={`relative font-bold text-sm flex items-center gap-2 pb-2 transition-colors ${
-                    taskFilter === 'completed' ? 'text-gray-800' : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${taskFilter === 'completed' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border'}`}
                 >
-                  <CheckCircle size={18} className={taskFilter === 'completed' ? "text-green-600" : "text-gray-400"} />
-                  已完成
-                  {taskFilter === 'completed' && (
-                     <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                       {tasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.VERIFIED || t.status === TaskStatus.REJECTED).length}
-                     </span>
-                  )}
-                   {taskFilter === 'completed' && <div className="absolute bottom-[-9px] left-0 w-full h-0.5 bg-green-600 rounded-t-full"></div>}
+                   已完成
                 </button>
-              </div>
-              
-              <div className="flex-1 space-y-3 overflow-y-auto max-h-[400px] pr-2">
+             </div>
+
+             <div className="space-y-3">
                 {tasks
                   .filter(t => {
                      const isActive = t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS;
@@ -849,115 +691,56 @@ export default function App() {
                   .map(task => (
                   <TaskItem key={task.id} task={task} onClick={() => setSelectedTask(task)} />
                 ))}
-                
-                {tasks.filter(t => {
-                     const isActive = t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS;
-                     return taskFilter === 'active' ? isActive : !isActive;
-                  }).length === 0 && (
-                   <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-                     <CheckCircle size={40} className="mb-2 opacity-20" />
-                     <p className="text-sm">{taskFilter === 'active' ? '暂无待办任务' : '暂无已完成任务'}</p>
-                   </div>
+                {tasks.filter(t => (taskFilter === 'active' ? (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS) : !(t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS))).length === 0 && (
+                   <div className="py-10 text-center text-gray-400 text-xs">暂无任务</div>
                 )}
-              </div>
-              
-              {taskFilter === 'active' && (
-                <button 
-                  onClick={() => addTask("新手动任务")}
-                  className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-medium hover:border-red-300 hover:text-red-500 transition-colors flex items-center justify-center gap-2"
-                >
-                  + 新增任务
-                </button>
-              )}
-            </div>
+             </div>
+
+             <button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="w-full py-3 bg-red-50 border border-dashed border-red-200 text-red-500 rounded-xl font-medium text-sm flex items-center justify-center gap-2"
+             >
+               + 新增任务
+             </button>
           </div>
+        )}
 
-          {/* RIGHT COLUMN: CHART & INSIGHTS (SWAPPED HERE) */}
-          <div className="space-y-6">
-            
-            {/* CHART AREA (Moved Here - Swapped) */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <TrendingUp size={18} className="text-red-600" />
-                  {(role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) 
-                    ? '实时客流' 
-                    : '业务增长'}
-                </h3>
-                <select className="bg-gray-50 border-none text-xs text-gray-500 rounded-md py-1 px-2">
-                  <option>Today</option>
-                  <option>7 Days</option>
-                </select>
-              </div>
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#DC2626" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 10}} 
-                      dy={10}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 10}} 
-                      width={30}
-                    />
-                    <Tooltip 
-                      contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#DC2626" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorValue)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* AI Insight Card */}
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl text-white relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full blur-[60px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-              <div className="relative z-10">
-                <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                  <Sparkles size={18} className="text-yellow-400" />
-                  智能洞察
-                </h3>
-                <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  {role === UserRole.STORE_ASSISTANT && "今日早班效率提升 10%，请继续保持。"}
-                  {role === UserRole.FRANCHISEE && "预计晚市外卖订单量将增加 25%，建议提前备好包材。"}
-                  {role === UserRole.HQ_SPECIALIST && "华东仓物流延误风险已解除，请关闭相关预警工单。"}
-                  {role === UserRole.HQ_MARKET_MANAGER && "华南大区B类门店库存周转率本周下降 5%，建议发起促销。"}
-                  {role === UserRole.HQ_EXECUTIVE && "Q3 整体净利润率优于行业平均水平 2.5 个百分点。"}
-                </p>
-                <button className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors backdrop-blur-sm">
-                  查看详情
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
       </main>
 
-      {/* MULTIMODAL INTERACTION CENTER (The "One Core") */}
-      <AIAssistant role={role} onTaskCreate={addTask} />
+      {/* --- BOTTOM NAVIGATION --- */}
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-40 pb-2">
+         <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 transition-colors ${activeTab === 'home' ? 'text-red-600' : 'text-gray-400'}`}>
+            <Home size={22} className={activeTab === 'home' ? 'fill-current' : ''} />
+            <span className="text-[10px] font-medium">首页</span>
+         </button>
+         <button onClick={() => setActiveTab('tasks')} className={`flex flex-col items-center gap-1 w-16 transition-colors ${activeTab === 'tasks' ? 'text-red-600' : 'text-gray-400'}`}>
+            <ClipboardList size={22} className={activeTab === 'tasks' ? 'fill-current' : ''} />
+            <span className="text-[10px] font-medium">任务</span>
+         </button>
+         
+         {/* AI Trigger Integrated in Nav */}
+         <div className="relative -top-5">
+           <button className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-full shadow-lg shadow-red-200 flex items-center justify-center text-white">
+             <Sparkles size={24} />
+           </button>
+         </div>
+
+         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400`}>
+            <MessageSquare size={22} />
+            <span className="text-[10px] font-medium">消息</span>
+         </button>
+         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400`}>
+            <User size={22} />
+            <span className="text-[10px] font-medium">我的</span>
+         </button>
+      </div>
+
+      {/* --- OVERLAYS --- */}
       
-      {/* TASK DETAILS DRAWER */}
+      {/* AI Assistant (Absolute positioning for mobile feel) */}
+      <AIAssistant role={role} onTaskCreate={(title) => addTask({title})} />
+      
+      {/* Task Details Drawer (Bottom Sheet Style) */}
       <TaskDetailsDrawer 
         task={selectedTask}
         isOpen={!!selectedTask}
@@ -969,7 +752,13 @@ export default function App() {
         onAiVerify={handleAiVerify}
       />
 
-      {/* TASK EDIT MODAL */}
+      {/* Modals (Absolute) */}
+      <TaskCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={addTask}
+      />
+
       <TaskEditModal 
         task={selectedTask}
         isOpen={isEditModalOpen}

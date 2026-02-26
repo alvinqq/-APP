@@ -33,7 +33,10 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
     setExpandedId(expandedId === id ? null : id);
   };
 
-  if (alerts.length === 0) return null;
+  // Filter out resolved alerts so they don't appear in the list
+  const activeAlerts = alerts.filter(a => a.status !== 'resolved');
+
+  if (activeAlerts.length === 0) return null;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -45,7 +48,7 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
           </div>
           <div>
             <h3 className="font-bold text-gray-800">门店异常与预警中心</h3>
-            <p className="text-xs text-red-500 font-medium">检测到 {alerts.filter(a => a.status !== 'resolved').length} 项待处理异常</p>
+            <p className="text-xs text-red-500 font-medium">检测到 {activeAlerts.length} 项待处理异常</p>
           </div>
         </div>
         <div className="text-xs text-gray-400 flex items-center gap-1">
@@ -55,10 +58,9 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
 
       {/* Alert List */}
       <div className="divide-y divide-gray-50">
-        {alerts.map((alert) => {
+        {activeAlerts.map((alert) => {
           const isExpanded = expandedId === alert.id;
           const isProcessing = alert.status === 'processing' || alert.status === 'assigned';
-          const isResolved = alert.status === 'resolved';
           
           return (
             <div key={alert.id} className={`transition-colors ${isExpanded ? 'bg-red-50/30' : 'hover:bg-gray-50'}`}>
@@ -74,7 +76,7 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
                     w-2 h-2 rounded-full flex-shrink-0
                     ${alert.status === 'new' ? 'bg-red-500 animate-ping' : 
                       alert.status === 'pending_verification' ? 'bg-amber-500' :
-                      isResolved ? 'bg-green-500' : 'bg-blue-500'}
+                      'bg-blue-500'}
                   `} />
                   
                   <div className="flex-1">
@@ -86,7 +88,7 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
                       }`}>
                         {alert.severity === 'high' ? '严重' : '一般'}
                       </span>
-                      <h4 className={`font-semibold text-sm ${isResolved ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                      <h4 className="font-semibold text-sm text-gray-800">
                         {alert.title}
                       </h4>
                     </div>
@@ -107,14 +109,12 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
                         alert.status === 'new' ? 'text-red-600 bg-red-50' :
                         alert.status === 'assigned' ? 'text-blue-600 bg-blue-50' :
                         alert.status === 'processing' ? 'text-blue-600 bg-blue-50' :
-                        alert.status === 'pending_verification' ? 'text-amber-600 bg-amber-50' :
-                        'text-green-600 bg-green-50'
+                        'text-amber-600 bg-amber-50'
                      }`}>
                        {alert.status === 'new' ? '需处理' :
                         alert.status === 'assigned' ? '已下发' :
                         alert.status === 'processing' ? '处理中' :
-                        alert.status === 'pending_verification' ? '待验证' :
-                        '已消除'}
+                        '待验证'}
                      </span>
                   </div>
                   {isExpanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
@@ -192,15 +192,15 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
                       )}
 
                       {/* Step 3: Result Verification */}
-                      {(alert.status === 'pending_verification' || alert.status === 'resolved') && (
-                         <div className={`p-3 rounded-lg border ${alert.status === 'pending_verification' ? 'bg-white border-amber-100 shadow-sm' : 'bg-green-50 border-green-100'}`}>
+                      {(alert.status === 'pending_verification') && (
+                         <div className="p-3 rounded-lg border bg-white border-amber-100 shadow-sm">
                             <div className="flex items-center gap-3 mb-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${alert.status === 'pending_verification' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}`}>
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-amber-100 text-amber-600">
                                 <CheckCircle2 size={16} />
                               </div>
                               <div className="flex-1">
                                 <div className="text-sm font-medium text-gray-800">
-                                  {alert.status === 'resolved' ? '异常已消除' : '结果待验证'}
+                                  结果待验证
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1 bg-gray-50 p-2 rounded flex items-start gap-1">
                                   <FileText size={10} className="mt-0.5" />
@@ -209,19 +209,17 @@ export const ExceptionAlertModule: React.FC<ExceptionAlertModuleProps> = ({
                               </div>
                             </div>
                             
-                            {alert.status === 'pending_verification' && (
-                              <div className="flex justify-end gap-2">
-                                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                                  退回重做
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); onVerify(alert.id); }}
-                                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm flex items-center gap-1"
-                                >
-                                  <CheckCircle2 size={12} /> 确认消除异常
-                                </button>
-                              </div>
-                            )}
+                            <div className="flex justify-end gap-2">
+                              <button className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                                退回重做
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); onVerify(alert.id); }}
+                                className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm flex items-center gap-1"
+                              >
+                                <CheckCircle2 size={12} /> 确认消除异常
+                              </button>
+                            </div>
                          </div>
                       )}
 

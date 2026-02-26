@@ -30,6 +30,7 @@ export interface Task {
   priority: 'high' | 'medium' | 'low';
   status: TaskStatus;
   timestamp: string;
+  dueDate?: string; // YYYY-MM-DD
   source: 'AI_GENERATED' | 'MANUAL';
   loopStage?: number; // 1-7 corresponding to the closed loop
   logs?: TaskActionLog[]; // 任务处理记录

@@ -1,8 +1,31 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+// Safety check for process.env in browser environments
+const getApiKey = () => {
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env) {
+      // @ts-ignore
+      return process.env.API_KEY || '';
+    }
+  } catch (e) {
+    return '';
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
+
+// Initialize lazily or safely
+let ai: GoogleGenAI | null = null;
+if (apiKey) {
+  try {
+    ai = new GoogleGenAI({ apiKey });
+  } catch (e) {
+    console.warn("Failed to initialize GoogleGenAI", e);
+  }
+}
 
 const SYSTEM_INSTRUCTION = `
 You are the AI Assistant for "Juezhi APP" (绝知APP), a retail super app.
@@ -30,7 +53,7 @@ export const sendMessageToGemini = async (
   roleContext: string
 ): Promise<string> => {
   try {
-    if (!apiKey) return "API Key not configured. Please check environment variables.";
+    if (!apiKey || !ai) return "API Key not configured (Env variable missing).";
 
     const model = 'gemini-3-flash-preview';
     
