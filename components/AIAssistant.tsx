@@ -88,6 +88,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate, on
         onClick={() => setIsOpen(true)}
       ></div>
 
+      {/* Modal Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-[55]"
+        ></div>
+      )}
+
       {/* Chat Interface (Bottom Sheet Style) */}
       <div 
         className={`

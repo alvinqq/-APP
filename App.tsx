@@ -7,6 +7,7 @@ import {
   Search, 
   Menu,
   ChevronDown,
+  ChevronRight,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
@@ -140,8 +141,8 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
   [UserRole.FRANCHISEE]: [
     { 
       id: 'f-1', 
-      title: '昨日营收异常确认', 
-      description: '昨日晚市营收低于预测值 15%，请确认是否为天气原因', 
+      title: '待盘点', 
+      description: '完成月末库存盘点，重点核对临期商品', 
       priority: 'high', 
       status: TaskStatus.PENDING, 
       timestamp: '09:00', 
@@ -149,37 +150,51 @@ const TASKS_BY_ROLE: Record<UserRole, Task[]> = {
       source: 'AI_GENERATED', 
       loopStage: 4,
       logs: [
-        { id: 'f1-1', actor: 'Data Engine', timestamp: '08:55', action: '检测到营收数据偏离阈值' },
-        { id: 'f1-2', actor: 'AI助手', timestamp: '09:00', action: '生成归因分析并推送待办' }
+        { id: 'f1-1', actor: '系统', timestamp: '08:55', action: '触发月末盘点提醒' },
+        { id: 'f1-2', actor: 'AI助手', timestamp: '09:00', action: '生成盘点清单' }
       ]
     },
     { 
       id: 'f-2', 
-      title: '排班表审核', 
-      description: '审核下周店员排班计划', 
-      priority: 'medium', 
-      status: TaskStatus.IN_PROGRESS, 
-      timestamp: '10:30', 
-      dueDate: TODAY,
-      source: 'MANUAL', 
-      loopStage: 0,
-      logs: [
-        { id: 'f2-1', actor: '系统', timestamp: '10:30', action: '收到店长提交的排班申请' },
-        { id: 'f2-2', actor: '当前用户', timestamp: '10:45', action: '查看了排班草稿' }
-      ]
-    },
-    { 
-      id: 'f-3', 
-      title: '进货单确认', 
-      description: '确认明日核心冻品订货量', 
+      title: '待报货', 
+      description: '确认明日核心冻品订货量（牛肉、蔬菜）', 
       priority: 'high', 
       status: TaskStatus.PENDING, 
-      timestamp: '22:00', 
+      timestamp: '10:30', 
       dueDate: TODAY,
       source: 'AI_GENERATED', 
       loopStage: 5,
       logs: [
-        { id: 'f3-1', actor: '供应链系统', timestamp: '22:00', action: '自动生成建议订货单' }
+        { id: 'f2-1', actor: '供应链系统', timestamp: '10:30', action: '检测到库存低于安全线' },
+        { id: 'f2-2', actor: 'AI助手', timestamp: '10:35', action: '生成补货建议' }
+      ]
+    },
+    { 
+      id: 'f-3', 
+      title: '待审核', 
+      description: '审核下周店员排班计划', 
+      priority: 'medium', 
+      status: TaskStatus.IN_PROGRESS, 
+      timestamp: '14:00', 
+      dueDate: TODAY,
+      source: 'MANUAL', 
+      loopStage: 0,
+      logs: [
+        { id: 'f3-1', actor: '系统', timestamp: '14:00', action: '收到店长提交的排班申请' }
+      ]
+    },
+    { 
+      id: 'f-4', 
+      title: '待进件', 
+      description: '处理新设备采购申请（收银机升级）', 
+      priority: 'medium', 
+      status: TaskStatus.PENDING, 
+      timestamp: '16:00', 
+      dueDate: TODAY,
+      source: 'MANUAL', 
+      loopStage: 0,
+      logs: [
+        { id: 'f4-1', actor: '系统', timestamp: '16:00', action: '收到设备采购申请' }
       ]
     },
   ],
@@ -208,26 +223,50 @@ const OPENING_STEPS = [
 const MOCK_ALERTS: ExceptionAlert[] = [
   {
     id: 'alert-001',
-    title: '客单价异常下跌预警',
+    title: '临期商品预警',
     severity: 'high',
     timestamp: '11:30',
     status: 'new',
-    attribution: '基于实时交易数据分析，今日午市时段客单价同比下跌 15%。AI 归因发现套餐 B（高毛利）销量异常低，可能是收银台展示牌未及时更新或缺货。',
-    recommendedTask: '检查前台 POP 物料及套餐 B 备货情况',
+    attribution: '系统检测到 3 批次商品即将到期（3天内），涉及金额约 ¥2,800。建议优先促销或申请退货处理。',
+    recommendedTask: '临期商品盘点与促销方案制定',
     assignedTo: '王小明 (店长)',
     progress: 0,
     resultSummary: ''
   },
   {
     id: 'alert-002',
-    title: '冻库温度波动预警',
-    severity: 'medium',
+    title: '销售额异常下滑',
+    severity: 'high',
     timestamp: '10:15',
-    status: 'processing',
-    attribution: 'IoT 传感器监测到 2 号冷柜温度在过去 1 小时内波动超过 3°C，疑似柜门未关严或除霜系统故障。',
-    recommendedTask: '检查冷柜门密封性及除霜设定',
+    status: 'new',
+    attribution: '本周销售额同比上周下降 18%，主要受雨天影响及竞品促销活动冲击。AI 建议调整午市套餐定价策略。',
+    recommendedTask: '制定促销活动应对方案',
     assignedTo: '张伟 (值班)',
-    progress: 45,
+    progress: 0,
+    resultSummary: ''
+  },
+  {
+    id: 'alert-003',
+    title: '毛利率异常下滑',
+    severity: 'high',
+    timestamp: '09:45',
+    status: 'pending_verification',
+    attribution: '昨日毛利率 42.3%，低于目标值 48%。主要原因为高毛利套餐销量占比下降 15%。',
+    recommendedTask: '调整产品结构与促销策略',
+    assignedTo: '李明 (运营)',
+    progress: 80,
+    resultSummary: '已调整套餐组合，今日数据待验证'
+  },
+  {
+    id: 'alert-004',
+    title: '库存不足预警',
+    severity: 'medium',
+    timestamp: '08:30',
+    status: 'processing',
+    attribution: '核心食材（牛肉、蔬菜）库存低于安全库存线 20%，预计 2 天后断货。建议立即发起补货申请。',
+    recommendedTask: '发起紧急补货申请',
+    assignedTo: '王芳 (采购)',
+    progress: 60,
     resultSummary: ''
   }
 ];
@@ -235,11 +274,11 @@ const MOCK_ALERTS: ExceptionAlert[] = [
 // --- SUB-COMPONENTS ---
 
 const StatCard = ({ title, value, trend, subtext, highlight = false }: { title: string, value: string, trend?: string, subtext?: string, highlight?: boolean }) => (
-  <div className={`p-4 rounded-xl border transition-all duration-200 ${highlight ? 'bg-gradient-to-br from-red-600 to-red-700 text-white border-transparent' : 'bg-white border-gray-100'}`}>
-    <div className="flex justify-between items-start mb-2">
+  <div className={`p-3.5 rounded-xl border transition-all duration-200 hover:shadow-md min-h-[88px] flex flex-col justify-between ${highlight ? 'bg-gradient-to-br from-red-600 to-red-700 text-white border-transparent shadow-lg shadow-red-200/50' : 'bg-white border-gray-100 hover:border-red-200'}`}>
+    <div className="flex justify-between items-start">
       <h3 className={`text-xs font-medium ${highlight ? 'text-red-100' : 'text-gray-500'}`}>{title}</h3>
       {trend && (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
           trend === 'neutral'
              ? (highlight ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600')
              : trend.startsWith('+') 
@@ -250,8 +289,29 @@ const StatCard = ({ title, value, trend, subtext, highlight = false }: { title: 
         </span>
       )}
     </div>
-    <div className="text-xl font-bold mb-1">{value}</div>
+    <div className="text-lg font-bold">{value}</div>
     {subtext && <div className={`text-[10px] ${highlight ? 'text-red-200' : 'text-gray-400'}`}>{subtext}</div>}
+  </div>
+);
+
+const DualStatCard = ({ value1, label1, value2, label2 }: { value1: string, label1: string, value2: string, label2: string }) => (
+  <div className="p-3.5 rounded-xl border border-gray-100 bg-white transition-all duration-200 hover:shadow-md hover:border-red-200 min-h-[88px]">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></div>
+          <span className="text-xs text-gray-600 truncate">{label1}</span>
+        </div>
+        <span className="text-sm font-bold text-gray-800 whitespace-nowrap">{value1}</span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
+          <span className="text-xs text-gray-600 truncate">{label2}</span>
+        </div>
+        <span className="text-sm font-bold text-gray-800 whitespace-nowrap">{value2}</span>
+      </div>
+    </div>
   </div>
 );
 
@@ -579,19 +639,9 @@ export default function App() {
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 pb-24 no-scrollbar smooth-scroll" style={{ maxHeight: 'calc(100vh - 4rem - 4rem)', minHeight: 'calc(100vh - 4rem - 4rem)' }}>
         
         {/* Status Bar / Loop */}
-        {role !== UserRole.STORE_ASSISTANT && (
+        {role !== UserRole.STORE_ASSISTANT && activeLoopStage > 0 && (
           <div className="transform scale-95 origin-center w-full">
-            {activeLoopStage > 0 ? (
-               <ProcessFlow currentStage={activeLoopStage} />
-            ) : (
-               <div className="bg-white rounded-xl p-3 flex items-center justify-between border border-red-50 shadow-sm">
-                 <div className="flex items-center gap-2">
-                   <div className="bg-red-50 p-1.5 rounded-lg text-red-600"><Building2 size={16} /></div>
-                   <div className="text-xs text-gray-500">系统运行正常</div>
-                 </div>
-                 <button onClick={triggerDataAlert} className="text-[10px] px-2 py-1 bg-red-50 text-red-600 rounded border border-red-100">模拟异常</button>
-               </div>
-            )}
+            <ProcessFlow currentStage={activeLoopStage} />
           </div>
         )}
 
@@ -599,110 +649,775 @@ export default function App() {
         {activeTab === 'home' && (
            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
               
-              {/* Modules based on Role */}
-              {role === UserRole.FRANCHISEE && (
-                <ExceptionAlertModule alerts={alerts} onAssignTask={handleAssignTask} onVerify={handleVerifyAlert} />
+              {/* 用户信息栏：账户名、问候语、天气 */}
+              <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg shadow-red-200">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-red-100">
+                      {role === UserRole.STORE_ASSISTANT ? '早上好，李店员' : 
+                       role === UserRole.FRANCHISEE ? '早上好，王小明' :
+                       role === UserRole.HQ_SPECIALIST ? '早上好，张专员' :
+                       role === UserRole.HQ_MARKET_MANAGER ? '早上好，李经理' : '早上好，陈总'}
+                    </span>
+                    <span className="text-lg font-bold">
+                      {role === UserRole.STORE_ASSISTANT ? '今日加油！' : 
+                       role === UserRole.FRANCHISEE ? '祝您生意兴隆！' :
+                       role === UserRole.HQ_SPECIALIST ? '战区业绩冲刺中！' :
+                       role === UserRole.HQ_MARKET_MANAGER ? '今日指标达成中！' : '全局掌控中'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1.5">
+                    <span className="text-lg">☀️</span>
+                    <span className="text-sm font-medium">28°C</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ==================== 门店店员首页 ==================== */}
+              {role === UserRole.STORE_ASSISTANT && (
+                <>
+                  {/* 今日个人业绩 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <TrendingUp size={16} className="text-red-600" />
+                        今日个人业绩
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatCard title="销售额" value="¥1,208" trend="+5.2%" highlight />
+                        <StatCard title="达成率" value="85%" trend="+3%" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatCard title="订单数" value="42" trend="+8" />
+                        <StatCard title="客单价" value="¥28.8" trend="neutral" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 我的任务 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <ClipboardList size={16} className="text-red-600" />
+                        我的任务
+                      </h3>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} 项待处理
+                      </span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).slice(0, 4).map((task) => (
+                        <div 
+                          key={task.id} 
+                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  task.priority === 'high' ? 'bg-red-500' : 
+                                  task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
+                                }`} />
+                                <h4 className="font-semibold text-sm text-gray-800">{task.title}</h4>
+                              </div>
+                              <p className="text-xs text-gray-500 line-clamp-1">{task.description}</p>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 培训考核提醒 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-500" />
+                        培训考核提醒
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <span className="text-sm">📚</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">新品上架规范培训</p>
+                            <p className="text-xs text-amber-600">今日需完成 • 已学习 60%</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">去学习</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <span className="text-sm">📝</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">食品安全考核</p>
+                            <p className="text-xs text-red-600">明日截止 • 待考试</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">去考试</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 收入预估 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <Target size={16} className="text-green-500" />
+                        收入预估
+                      </h3>
+                    </div>
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500">实时提成</p>
+                          <p className="text-lg font-bold text-gray-800">¥120.80</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">奖金预估</p>
+                          <p className="text-lg font-bold text-green-600">¥280.00</p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '65%' }}></div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">完成目标可额外获得¥150奖金</p>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Metrics Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                  {role === UserRole.STORE_ASSISTANT && (
-                    <>
-                      <StatCard title="订单收入" value="¥1,208" trend="+5.2%" />
-                      <StatCard title="待办任务" value="3" trend="neutral" />
-                    </>
-                  )}
-                  {role === UserRole.FRANCHISEE && (
-                    <>
-                      <StatCard title="订单实收" value="¥12,840" trend="+12%" highlight />
-                      <StatCard title="订单量" value="302" trend="+15" />
-                    </>
-                  )}
-                  {(role !== UserRole.STORE_ASSISTANT && role !== UserRole.FRANCHISEE) && (
-                     <>
-                      <StatCard title="核心指标" value="98.5%" trend="+1.2%" highlight />
-                      <StatCard title="异常工单" value="12" trend="-5%" />
-                     </>
-                  )}
-              </div>
+              {/* ==================== 加盟商首页 ==================== */}
+              {role === UserRole.FRANCHISEE && (
+                <>
+                  <ExceptionAlertModule alerts={alerts} onAssignTask={handleAssignTask} onVerify={handleVerifyAlert} />
 
-              {/* Chart */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                    <TrendingUp size={16} className="text-red-600" />
-                    {(role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) ? '实时客流' : '业务趋势'}
-                  </h3>
-                </div>
-                <div className="h-40 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#DC2626" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" hide />
-                      <Tooltip contentStyle={{borderRadius: '8px', fontSize: '12px'}} />
-                      <Area type="monotone" dataKey="value" stroke="#DC2626" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-               {/* AI Insight */}
-               <div className="bg-gray-900 p-4 rounded-2xl text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full blur-[40px] opacity-20"></div>
-                  <div className="relative z-10">
-                    <h3 className="text-sm font-bold mb-1 flex items-center gap-2">
-                      <Sparkles size={14} className="text-yellow-400" /> 智能洞察
-                    </h3>
-                    <p className="text-gray-300 text-xs leading-relaxed line-clamp-2">
-                      {role === UserRole.STORE_ASSISTANT ? "今日早班效率提升 10%，请继续保持。" : "华东仓物流延误风险已解除，请关闭相关预警工单。"}
-                    </p>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <TrendingUp size={16} className="text-red-600" />
+                        门店核心指标
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatCard title="实时营收" value="¥12,840" trend="+12%" highlight />
+                        <DualStatCard value1="¥45,680" label1="货款余额" value2="¥32,450" label2="本月进货额" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatCard title="昨日毛利额" value="¥5,432" trend="-3.2%" />
+                        <StatCard title="昨日毛利率" value="42.3%" trend="-5.7%" />
+                      </div>
+                    </div>
                   </div>
-               </div>
-           </div>
+
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <ClipboardList size={16} className="text-red-600" />
+                        待办任务
+                      </h3>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} 项待处理
+                      </span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).slice(0, 4).map((task) => (
+                        <div 
+                          key={task.id} 
+                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  task.priority === 'high' ? 'bg-red-500' : 
+                                  task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
+                                }`} />
+                                <h4 className="font-semibold text-sm text-gray-800">{task.title}</h4>
+                              </div>
+                              <p className="text-xs text-gray-500 line-clamp-1">{task.description}</p>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ==================== 战区专员首页 ==================== */}
+              {role === UserRole.HQ_SPECIALIST && (
+                <>
+                  {/* 战区作战地图 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <Map size={16} className="text-red-600" />
+                        战区作战地图
+                      </h3>
+                      <span className="text-xs text-gray-500">华东战区 • 12家门店</span>
+                    </div>
+                    <div className="p-3">
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        <div className="bg-green-50 rounded-xl p-2 text-center border border-green-100">
+                          <p className="text-lg font-bold text-green-600">8</p>
+                          <p className="text-[10px] text-green-600">正常门店</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-xl p-2 text-center border border-amber-100">
+                          <p className="text-lg font-bold text-amber-600">3</p>
+                          <p className="text-[10px] text-amber-600">关注门店</p>
+                        </div>
+                        <div className="bg-red-50 rounded-xl p-2 text-center border border-red-100">
+                          <p className="text-lg font-bold text-red-600">1</p>
+                          <p className="text-[10px] text-red-600">问题门店</p>
+                        </div>
+                      </div>
+                      {/* 问题门店列表 */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-600 font-bold text-xs">A</div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">上海南京路店</p>
+                              <p className="text-xs text-red-500">动销差 • 库存高</p>
+                            </div>
+                          </div>
+                          <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">需关注</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 font-bold text-xs">B</div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">杭州西湖店</p>
+                              <p className="text-xs text-amber-500">毛利率下滑</p>
+                            </div>
+                          </div>
+                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">观察中</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI智能诊断 */}
+                  <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl p-4 text-white shadow-lg shadow-purple-200">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">🤖</div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm mb-1">AI智能诊断摘要</h4>
+                        <p className="text-xs text-purple-100 mb-2">根据战区数据分析，建议重点关注以下事项：</p>
+                        <div className="bg-white/10 rounded-lg p-2">
+                          <p className="text-xs text-white">• 建议协助上海南京路店调整商品陈列，提升动销</p>
+                          <p className="text-xs text-white">• 杭州西湖店库存周转天数超阈值，建议促销清理</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 协同工单进展 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <ClipboardList size={16} className="text-red-600" />
+                        协同工单进展
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-sm text-gray-800">新品陈列调整申请</h4>
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">处理中</span>
+                        </div>
+                        <p className="text-xs text-gray-500">提交给：运营部 • 等待审批</p>
+                      </div>
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-semibold text-sm text-gray-800">促销活动方案</h4>
+                          <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已通过</span>
+                        </div>
+                        <p className="text-xs text-gray-500">提交给：市场部 • 已执行</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 核心指标 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <StatCard title="战区销售额" value="¥128,400" trend="+8.5%" />
+                    <StatCard title="问题门店" value="3" trend="neutral" />
+                  </div>
+                </>
+              )}
+
+              {/* ==================== 运营经理首页 ==================== */}
+              {role === UserRole.HQ_MARKET_MANAGER && (
+                <>
+                  {/* 核心指标看板 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <PieChart size={16} className="text-red-600" />
+                        核心指标看板
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <StatCard title="销售额" value="¥856.2K" trend="+12.3%" />
+                        <StatCard title="进货额" value="¥428.5K" trend="+5.8%" />
+                        <StatCard title="活动参与" value="92%" trend="+3.2%" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 个人KPI */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <Target size={16} className="text-red-600" />
+                        个人KPI
+                      </h3>
+                    </div>
+                    <div className="p-3">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">销售额目标达成</span>
+                            <span className="text-gray-800 font-medium">85%</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">新店拓展</span>
+                            <span className="text-gray-800 font-medium">60%</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '60%' }}></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">活动执行率</span>
+                            <span className="text-gray-800 font-medium">95%</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '95%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI指标异动诊断 */}
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-200">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">🤖</div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm mb-1">指标异动诊断</h4>
+                        <p className="text-xs text-blue-100 mb-2">AI自动分析 • 刚刚更新</p>
+                        <div className="bg-white/10 rounded-lg p-2">
+                          <p className="text-xs text-white">• 华东区销售额下降5%，主要因A类门店客流减少12%</p>
+                          <p className="text-xs text-white">• 华南区域进货额增长8%，源于新品推广活动效果显著</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 待处理事项 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <ClipboardList size={16} className="text-red-600" />
+                        待处理事项
+                      </h3>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">5 项</span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            <h4 className="font-semibold text-sm text-gray-800">Q4营销活动方案审批</h4>
+                          </div>
+                          <ChevronRight size={14} className="text-gray-400" />
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            <h4 className="font-semibold text-sm text-gray-800">区域促销申请审核</h4>
+                          </div>
+                          <ChevronRight size={14} className="text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ==================== 高管首页 ==================== */}
+              {role === UserRole.HQ_EXECUTIVE && (
+                <>
+                  {/* 全景驾驶舱 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <Building2 size={16} className="text-red-600" />
+                        全景驾驶舱
+                      </h3>
+                    </div>
+                    <div className="p-3">
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-3 border border-red-100">
+                          <p className="text-xs text-red-600 mb-1">销售</p>
+                          <p className="text-xl font-bold text-gray-800">¥8,562K</p>
+                          <p className="text-[10px] text-green-600">+12.3% ↑</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-100">
+                          <p className="text-xs text-blue-600 mb-1">进货</p>
+                          <p className="text-xl font-bold text-gray-800">¥4,285K</p>
+                          <p className="text-[10px] text-green-600">+5.8% ↑</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-3 border border-purple-100">
+                          <p className="text-xs text-purple-600 mb-1">运营</p>
+                          <p className="text-xl font-bold text-gray-800">92%</p>
+                          <p className="text-[10px] text-green-600">+3.2% ↑</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-3 border border-amber-100">
+                          <p className="text-xs text-amber-600 mb-1">供应链</p>
+                          <p className="text-xl font-bold text-gray-800">15天</p>
+                          <p className="text-[10px] text-amber-600">-2天 ↓</p>
+                        </div>
+                      </div>
+                      {/* 趋势图简略展示 */}
+                      <div className="h-24 bg-gray-50 rounded-xl flex items-end justify-around p-2 border border-gray-100">
+                        {[65, 78, 82, 75, 88, 92, 85, 90, 95, 88, 92, 98].map((v, i) => (
+                          <div key={i} className="w-3 bg-gradient-to-t from-red-400 to-red-500 rounded-t" style={{ height: `${v}%` }}></div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-400 text-center mt-1">近12个月销售趋势</p>
+                    </div>
+                  </div>
+
+                  {/* AI全局风险与机会 */}
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-4 text-white shadow-lg shadow-gray-300">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">🤖</div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm mb-1">AI风险预警与机会洞察</h4>
+                        <p className="text-xs text-gray-400 mb-2">全局智能分析 • 每日更新</p>
+                        <div className="space-y-2">
+                          <div className="bg-red-500/20 rounded-lg p-2 border border-red-500/30">
+                            <p className="text-xs text-red-300 font-medium">⚠️ 全局性风险</p>
+                            <p className="text-[10px] text-gray-300">XX品类全国库存周转天数超阈值，建议促销清理</p>
+                          </div>
+                          <div className="bg-green-500/20 rounded-lg p-2 border border-green-500/30">
+                            <p className="text-xs text-green-300 font-medium">📈 增长机会</p>
+                            <p className="text-[10px] text-gray-300">华东区域新品表现优异，建议全国推广</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 关键审批流 */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <CheckCircle size={16} className="text-red-600" />
+                        待审批事项
+                      </h3>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">8 项</span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-sm text-gray-800">XX区域促销活动申请</h4>
+                            <p className="text-xs text-gray-500">运营部 • 预算¥50K</p>
+                          </div>
+                          <span className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-full">紧急</span>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-sm text-gray-800">新店开业计划</h4>
+                            <p className="text-xs text-gray-500">拓展部 • 10月落地</p>
+                          </div>
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full">待审批</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 通用：其他角色显示简单指标 */}
+              {(role === UserRole.STORE_ASSISTANT || role === UserRole.FRANCHISEE) && (
+                <></>
+              )}
+            </div>
         )}
 
-        {activeTab === 'tasks' && (
+        {activeTab === 'workbench' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-             <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
-                <button 
-                  onClick={() => setTaskFilter('active')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${taskFilter === 'active' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border'}`}
-                >
-                   待办 ({tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length})
+            {/* 常用功能模块及编辑 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="font-bold text-gray-800 text-sm">常用功能</h3>
+                <button className="text-xs text-gray-500 flex items-center gap-1">
+                  <span>编辑</span>
+                  <ChevronDown size={12} />
                 </button>
-                <button 
-                  onClick={() => setTaskFilter('completed')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${taskFilter === 'completed' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border'}`}
-                >
-                   已完成
-                </button>
-             </div>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+                    <span className="text-sm">🎯</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">临期促销</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">🛒</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">订单管理</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">📦</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">商品上下架</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">📋</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">库存盘点</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">🚚</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">报收投</span>
+                </div>
+              </div>
+            </div>
 
-             <div className="space-y-3">
-                {tasks
-                  .filter(t => {
-                     const isActive = t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS;
-                     return taskFilter === 'active' ? isActive : !isActive;
-                  })
-                  .map(task => (
-                  <TaskItem key={task.id} task={task} onClick={() => setSelectedTask(task)} />
-                ))}
-                {tasks.filter(t => (taskFilter === 'active' ? (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS) : !(t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS))).length === 0 && (
-                   <div className="py-10 text-center text-gray-400 text-xs">暂无任务</div>
-                )}
-             </div>
+            {/* 销售类 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800 text-sm">销售类</h3>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">🎯</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">临期促销</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">🛒</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">订单管理</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">📦</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">商品上下架</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">📊</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">异常流水</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">🛍️</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">POS商品隐藏</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">📈</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">销售上报</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">📋</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">POS报表</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">📱</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">移动收银</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">🔍</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">扫码核券</span>
+                </div>
+              </div>
+            </div>
 
-             <button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="w-full py-3 bg-red-50 border border-dashed border-red-200 text-red-500 rounded-xl font-medium text-sm flex items-center justify-center gap-2"
-             >
-               + 新增任务
-             </button>
+            {/* 店务类 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800 text-sm">店务类</h3>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">🚚</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">报收投</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">🎁</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">门店拆包</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">📄</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">调拨</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">🗑️</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">报损</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">🍽️</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">试吃</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">📋</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">库存盘点</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">💻</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">在线运营</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 系统功能 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800 text-sm">系统功能</h3>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">🔑</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">POS登录</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">💻</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">IT服务</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 数据 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800 text-sm">数据</h3>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">💬</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">私域管理</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">🧭</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">经营罗盘</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 其他类 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-800 text-sm">其他类</h3>
+              </div>
+              <div className="p-4 grid grid-cols-5 gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">👣</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">来访报备</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="text-sm">💳</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">支付进件</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                    <span className="text-sm">💰</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">授信</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+                    <span className="text-sm">🤖</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">绝智</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                    <span className="text-sm">🔧</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">维修申报</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <span className="text-sm">💼</span>
+                  </div>
+                  <span className="text-[9px] text-gray-600 text-center">企业微信</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -714,9 +1429,9 @@ export default function App() {
             <Home size={22} className={activeTab === 'home' ? 'fill-current' : ''} />
             <span className="text-[10px] font-medium">首页</span>
          </button>
-         <button onClick={() => setActiveTab('tasks')} className={`flex flex-col items-center gap-1 w-16 transition-colors touch-target ${activeTab === 'tasks' ? 'text-red-600' : 'text-gray-400'}`}>
-            <ClipboardList size={22} className={activeTab === 'tasks' ? 'fill-current' : ''} />
-            <span className="text-[10px] font-medium">任务</span>
+         <button onClick={() => setActiveTab('workbench')} className={`flex flex-col items-center gap-1 w-16 transition-colors touch-target ${activeTab === 'workbench' ? 'text-red-600' : 'text-gray-400'}`}>
+            <ClipboardList size={22} className={activeTab === 'workbench' ? 'fill-current' : ''} />
+            <span className="text-[10px] font-medium">工作台</span>
          </button>
          
          {/* AI Trigger Integrated in Nav */}
