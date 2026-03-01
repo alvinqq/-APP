@@ -6,9 +6,10 @@ import { ChatMessage, UserRole } from '../types';
 interface AIAssistantProps {
   role: UserRole;
   onTaskCreate: (taskTitle: string) => void;
+  onClose?: () => void;
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) => {
+export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate, onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,13 +88,18 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) 
         onClick={() => setIsOpen(true)}
       ></div>
 
-      {/* Chat Interface (Full Overlay in Mobile Container) */}
+      {/* Chat Interface (Bottom Sheet Style) */}
       <div 
         className={`
-          absolute inset-0 z-[60] bg-white flex flex-col transition-transform duration-300 ease-in-out
+          fixed bottom-0 left-1/2 transform -translate-x-1/2 z-[60] bg-white flex flex-col rounded-t-2xl shadow-2xl transition-transform duration-300 ease-in-out transform
+          max-w-[387px] w-[90%]
           ${isOpen ? 'translate-y-0' : 'translate-y-full'}
         `}
+        style={{ height: '50vh' }}
       >
+        {/* Draggable Handle */}
+        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto my-2"></div>
+        
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-gray-50">
           <div className="flex items-center gap-2">
@@ -108,13 +114,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) 
               </p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="p-2 bg-gray-200 rounded-full text-gray-500">
+          <button onClick={() => {
+            setIsOpen(false);
+            if (onClose) onClose();
+          }} className="p-2 bg-gray-200 rounded-full text-gray-500">
             <X size={18} />
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 pb-20">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -147,7 +156,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ role, onTaskCreate }) 
         </div>
 
         {/* Input Area */}
-        <div className="p-3 bg-white border-t safe-area-bottom">
+        <div className="p-3 bg-white border-t">
            <div className="flex items-center gap-2 mb-2 px-1">
               <button className="text-gray-400"><ImageIcon size={20} /></button>
               <button onClick={handleVoiceSim} className={`text-gray-400 ${isProcessing ? 'text-red-500 animate-pulse' : ''}`}><Mic size={20} /></button>

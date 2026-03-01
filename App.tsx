@@ -325,6 +325,7 @@ export default function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [showDueWarning, setShowDueWarning] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // Switch tasks when role changes
   useEffect(() => {
@@ -509,7 +510,7 @@ export default function App() {
     : GENERATE_WEEKLY_DATA(role === UserRole.HQ_EXECUTIVE ? 1000000 : 500000);
 
   return (
-    <div className="w-full max-w-[430px] mx-auto bg-[#F8FAFC] min-h-screen sm:my-8 sm:rounded-[32px] sm:shadow-2xl sm:border-[8px] sm:border-gray-800 relative overflow-hidden flex flex-col font-sans">
+    <div className="w-full max-w-[430px] mx-auto bg-[#F8FAFC] min-h-screen sm:my-8 sm:rounded-[32px] sm:shadow-2xl sm:border-[8px] sm:border-gray-800 relative flex flex-col font-sans no-font-scaling">
       
       {/* --- IN-APP NOTIFICATION TOAST --- */}
       {showDueWarning && (
@@ -530,7 +531,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- HEADER --- */}
+      {/* --- FIXED HEADER --- */}
       <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 sticky top-0 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-red-200">绝</div>
@@ -575,7 +576,7 @@ export default function App() {
       </header>
 
       {/* --- SCROLLABLE CONTENT --- */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 pb-24 no-scrollbar">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 pb-24 no-scrollbar smooth-scroll" style={{ maxHeight: 'calc(100vh - 4rem - 4rem)', minHeight: 'calc(100vh - 4rem - 4rem)' }}>
         
         {/* Status Bar / Loop */}
         {role !== UserRole.STORE_ASSISTANT && (
@@ -707,29 +708,32 @@ export default function App() {
 
       </main>
 
-      {/* --- BOTTOM NAVIGATION --- */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-40 pb-2">
-         <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 transition-colors ${activeTab === 'home' ? 'text-red-600' : 'text-gray-400'}`}>
+      {/* --- FIXED BOTTOM NAVIGATION --- */}
+      <div className="sticky bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-40 bottom-nav-safe-area">
+         <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 transition-colors touch-target ${activeTab === 'home' ? 'text-red-600' : 'text-gray-400'}`}>
             <Home size={22} className={activeTab === 'home' ? 'fill-current' : ''} />
             <span className="text-[10px] font-medium">首页</span>
          </button>
-         <button onClick={() => setActiveTab('tasks')} className={`flex flex-col items-center gap-1 w-16 transition-colors ${activeTab === 'tasks' ? 'text-red-600' : 'text-gray-400'}`}>
+         <button onClick={() => setActiveTab('tasks')} className={`flex flex-col items-center gap-1 w-16 transition-colors touch-target ${activeTab === 'tasks' ? 'text-red-600' : 'text-gray-400'}`}>
             <ClipboardList size={22} className={activeTab === 'tasks' ? 'fill-current' : ''} />
             <span className="text-[10px] font-medium">任务</span>
          </button>
          
          {/* AI Trigger Integrated in Nav */}
          <div className="relative -top-5">
-           <button className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-full shadow-lg shadow-red-200 flex items-center justify-center text-white">
+           <button 
+             onClick={() => setShowAIAssistant(!showAIAssistant)}
+             className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-full shadow-lg shadow-red-200 flex items-center justify-center text-white touch-target"
+           >
              <Sparkles size={24} />
            </button>
          </div>
 
-         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400`}>
+         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400 touch-target`}>
             <MessageSquare size={22} />
             <span className="text-[10px] font-medium">消息</span>
          </button>
-         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400`}>
+         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400 touch-target`}>
             <User size={22} />
             <span className="text-[10px] font-medium">我的</span>
          </button>
@@ -737,8 +741,8 @@ export default function App() {
 
       {/* --- OVERLAYS --- */}
       
-      {/* AI Assistant (Absolute positioning for mobile feel) */}
-      <AIAssistant role={role} onTaskCreate={(title) => addTask({title})} />
+      {/* AI Assistant (Only show when explicitly triggered) */}
+      {showAIAssistant && <AIAssistant role={role} onTaskCreate={(title) => addTask({title})} onClose={() => setShowAIAssistant(false)} />}
       
       {/* Task Details Drawer (Bottom Sheet Style) */}
       <TaskDetailsDrawer 
