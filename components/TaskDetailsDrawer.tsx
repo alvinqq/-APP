@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, Edit3, Clock, Share2, Activity, History, Image as ImageIcon, AlertTriangle, XCircle, Check, Loader2, BrainCircuit, Calendar } from 'lucide-react';
-import { Task, TaskStatus } from '../types';
+import { Task, TaskStatus, UserRole } from '../types';
 
 interface TaskDetailsDrawerProps {
   task: Task | null;
@@ -11,6 +11,7 @@ interface TaskDetailsDrawerProps {
   onReject: (taskId: string) => void;
   onAccept: (taskId: string) => void;
   onAiVerify: (taskId: string) => void;
+  role: UserRole;
 }
 
 export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
@@ -21,7 +22,8 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
   onEdit,
   onReject,
   onAccept,
-  onAiVerify
+  onAiVerify,
+  role
 }) => {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -180,15 +182,19 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white flex gap-3 z-30 pb-8">
                 {task.status === TaskStatus.PENDING ? (
                     <>
-                        <button 
-                            onClick={() => setShowRejectConfirm(true)}
-                            className="flex-1 py-3 bg-white border border-gray-200 text-red-600 font-bold text-sm rounded-xl"
-                        >
-                            驳回
-                        </button>
+                        {role !== UserRole.STORE_ASSISTANT && (
+                            <button 
+                                onClick={() => setShowRejectConfirm(true)}
+                                className="flex-1 py-3 bg-white border border-gray-200 text-red-600 font-bold text-sm rounded-xl"
+                            >
+                                驳回
+                            </button>
+                        )}
                         <button 
                             onClick={() => onAccept(task.id)}
-                            className="flex-[2] py-3 bg-red-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-200"
+                            className={`py-3 bg-red-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-200 ${
+                                role === UserRole.STORE_ASSISTANT ? 'w-full' : 'flex-[2]'
+                            }`}
                         >
                             接收任务
                         </button>

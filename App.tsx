@@ -40,6 +40,8 @@ import { TaskDetailsDrawer } from './components/TaskDetailsDrawer';
 import { ExceptionAlertModule } from './components/ExceptionAlertModule';
 import { TaskEditModal } from './components/TaskEditModal';
 import { TaskCreateModal } from './components/TaskCreateModal';
+import TrainingStudyPage from './components/TrainingStudyPage';
+import TrainingExamPage from './components/TrainingExamPage';
 
 // --- MOCK DATA GENERATORS ---
 
@@ -386,6 +388,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [showDueWarning, setShowDueWarning] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [currentTrainingPage, setCurrentTrainingPage] = useState<'study' | 'exam' | null>(null);
+  const [currentTrainingId, setCurrentTrainingId] = useState<string>('');
+  const [trainingProgress, setTrainingProgress] = useState<Record<string, { studyCompleted: boolean; examCompleted: boolean; examScore?: number }>>({
+    'training-1': { studyCompleted: false, examCompleted: false },
+    'training-2': { studyCompleted: false, examCompleted: false },
+  });
 
   // Switch tasks when role changes
   useEffect(() => {
@@ -569,6 +577,138 @@ export default function App() {
     ? GENERATE_HOURLY_DATA(role === UserRole.FRANCHISEE ? 5000 : 3000)
     : GENERATE_WEEKLY_DATA(role === UserRole.HQ_EXECUTIVE ? 1000000 : 500000);
 
+  const handleTrainingStudyComplete = () => {
+    setTrainingProgress((prev) => ({
+      ...prev,
+      [currentTrainingId]: { ...prev[currentTrainingId], studyCompleted: true }
+    }));
+    setCurrentTrainingPage(null);
+  };
+
+  const handleTrainingExamComplete = (score: number, passed: boolean) => {
+    setTrainingProgress((prev) => ({
+      ...prev,
+      [currentTrainingId]: { ...prev[currentTrainingId], examCompleted: passed, examScore: score }
+    }));
+    setCurrentTrainingPage(null);
+  };
+
+  const handleTrainingBack = () => {
+    setCurrentTrainingPage(null);
+  };
+
+  if (currentTrainingPage) {
+    if (currentTrainingPage === 'study') {
+      const trainingData = {
+        'training-1': { title: '新品上架规范培训', type: 'video' as const, contentUrl: '' },
+        'training-2': { title: '食品安全培训', type: 'document' as const, contentUrl: '' }
+      };
+      const data = trainingData[currentTrainingId as keyof typeof trainingData];
+      return (
+        <TrainingStudyPage
+          trainingId={currentTrainingId}
+          title={data.title}
+          type={data.type}
+          contentUrl={data.contentUrl}
+          onComplete={handleTrainingStudyComplete}
+          onBack={handleTrainingBack}
+        />
+      );
+    } else if (currentTrainingPage === 'exam') {
+      const examData = {
+        'training-1': {
+          title: '新品上架规范考核',
+          questions: [
+            {
+              id: 'q1',
+              type: 'single' as const,
+              question: '新品上架前需要检查哪些内容？',
+              options: ['商品包装完整性', '生产日期', '商品质量', '以上都是'],
+              required: true,
+              correctAnswer: '以上都是',
+              score: 25
+            },
+            {
+              id: 'q2',
+              type: 'multiple' as const,
+              question: '新品上架的注意事项包括哪些？（多选）',
+              options: ['及时更新价格标签', '摆放位置合理', '保持商品清洁', '随意摆放即可'],
+              required: true,
+              correctAnswer: ['及时更新价格标签', '摆放位置合理', '保持商品清洁'],
+              score: 25
+            },
+            {
+              id: 'q3',
+              type: 'single' as const,
+              question: '发现商品质量问题应该怎么办？',
+              options: ['立即下架', '继续销售', '等待上级指示', '打折处理'],
+              required: true,
+              correctAnswer: '立即下架',
+              score: 25
+            },
+            {
+              id: 'q4',
+              type: 'text' as const,
+              question: '请简述新品上架的标准流程。',
+              required: true,
+              score: 25
+            }
+          ]
+        },
+        'training-2': {
+          title: '食品安全考核',
+          questions: [
+            {
+              id: 'q1',
+              type: 'single' as const,
+              question: '食品储存温度应该控制在多少度以下？',
+              options: ['4°C', '8°C', '10°C', '12°C'],
+              required: true,
+              correctAnswer: '4°C',
+              score: 25
+            },
+            {
+              id: 'q2',
+              type: 'multiple' as const,
+              question: '食品安全管理包括哪些方面？（多选）',
+              options: ['人员卫生', '环境卫生', '设备清洁', '以上都是'],
+              required: true,
+              correctAnswer: ['人员卫生', '环境卫生', '设备清洁'],
+              score: 25
+            },
+            {
+              id: 'q3',
+              type: 'single' as const,
+              question: '发现过期食品应该怎么办？',
+              options: ['立即下架并销毁', '打折销售', '继续销售', '等待检查'],
+              required: true,
+              correctAnswer: '立即下架并销毁',
+              score: 25
+            },
+            {
+              id: 'q4',
+              type: 'text' as const,
+              question: '请简述食品安全检查的要点。',
+              required: true,
+              score: 25
+            }
+          ]
+        }
+      };
+      const data = examData[currentTrainingId as keyof typeof examData];
+      return (
+        <TrainingExamPage
+          examId={currentTrainingId}
+          title={data.title}
+          questions={data.questions}
+          passingScore={80}
+          onComplete={handleTrainingExamComplete}
+          onBack={handleTrainingBack}
+        />
+      );
+    }
+  }
+
   return (
     <div className="w-full max-w-[430px] mx-auto bg-[#F8FAFC] min-h-screen sm:my-8 sm:rounded-[32px] sm:shadow-2xl sm:border-[8px] sm:border-gray-800 relative flex flex-col font-sans no-font-scaling">
       
@@ -741,30 +881,86 @@ export default function App() {
                       </h3>
                     </div>
                     <div className="p-3 space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                            <span className="text-sm">📚</span>
+                      {!trainingProgress['training-1'].studyCompleted && (
+                        <div 
+                          onClick={() => {
+                            setCurrentTrainingId('training-1');
+                            setCurrentTrainingPage('study');
+                          }}
+                          className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                              <span className="text-sm">📚</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">新品上架规范培训</p>
+                              <p className="text-xs text-amber-600">今日需完成 • {trainingProgress['training-1'].studyCompleted ? '已完成' : '待学习'}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">新品上架规范培训</p>
-                            <p className="text-xs text-amber-600">今日需完成 • 已学习 60%</p>
-                          </div>
+                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">去学习</span>
                         </div>
-                        <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">去学习</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                            <span className="text-sm">📝</span>
+                      )}
+                      {!trainingProgress['training-1'].examCompleted && trainingProgress['training-1'].studyCompleted && (
+                        <div 
+                          onClick={() => {
+                            setCurrentTrainingId('training-1');
+                            setCurrentTrainingPage('exam');
+                          }}
+                          className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100 cursor-pointer hover:bg-red-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                              <span className="text-sm">📝</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">新品上架规范考核</p>
+                              <p className="text-xs text-red-600">明日截止 • 待考试</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">食品安全考核</p>
-                            <p className="text-xs text-red-600">明日截止 • 待考试</p>
-                          </div>
+                          <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">去考试</span>
                         </div>
-                        <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">去考试</span>
-                      </div>
+                      )}
+                      {!trainingProgress['training-2'].studyCompleted && (
+                        <div 
+                          onClick={() => {
+                            setCurrentTrainingId('training-2');
+                            setCurrentTrainingPage('study');
+                          }}
+                          className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                              <span className="text-sm">📚</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">食品安全培训</p>
+                              <p className="text-xs text-amber-600">今日需完成 • {trainingProgress['training-2'].studyCompleted ? '已完成' : '待学习'}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">去学习</span>
+                        </div>
+                      )}
+                      {!trainingProgress['training-2'].examCompleted && trainingProgress['training-2'].studyCompleted && (
+                        <div 
+                          onClick={() => {
+                            setCurrentTrainingId('training-2');
+                            setCurrentTrainingPage('exam');
+                          }}
+                          className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100 cursor-pointer hover:bg-red-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                              <span className="text-sm">📝</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">食品安全考核</p>
+                              <p className="text-xs text-red-600">明日截止 • 待考试</p>
+                            </div>
+                          </div>
+                          <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">去考试</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1469,6 +1665,7 @@ export default function App() {
         onReject={handleTaskReject}
         onAccept={handleTaskAccept}
         onAiVerify={handleAiVerify}
+        role={role}
       />
 
       {/* Modals (Absolute) */}
