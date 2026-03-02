@@ -75,3 +75,69 @@ export const BUSINESS_LOOP_STAGES = [
   '执行反馈', // 6
   '效果验证'  // 7
 ];
+
+// 报表类型
+export enum ReportType {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY'
+}
+
+// 报表状态
+export enum ReportStatus {
+  NEW = 'NEW',
+  READ = 'READ',
+  ARCHIVED = 'ARCHIVED'
+}
+
+// 门店指标数据
+export interface StoreMetrics {
+  storeId: string;
+  storeName: string;
+  revenue: number;
+  orderCount: number;
+  customerCount: number;
+  avgOrderValue: number;
+  grossMargin: number;
+  grossMarginRate: number;
+  inventoryTurnover: number;
+  alerts: string[];
+}
+
+// 报表数据
+export interface ReportData {
+  reportId: string;
+  reportType: ReportType;
+  reportDate: string;
+  periodStart: string;
+  periodEnd: string;
+  totalRevenue: number;
+  totalOrderCount: number;
+  totalCustomerCount: number;
+  avgOrderValue: number;
+  grossMargin: number;
+  grossMarginRate: number;
+  revenueTrend: number;
+  orderTrend: number;
+  customerTrend: number;
+  storeMetrics: StoreMetrics[];
+  summary: string;
+  keyInsights: string[];
+  recommendations: string[];
+}
+
+// 通知数据
+export interface Notification {
+  id: string;
+  type: 'REPORT' | 'TASK' | 'ALERT';
+  title: string;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+  data?: {
+    reportId?: string;
+    reportType?: ReportType;
+    taskId?: string;
+    alertId?: string;
+  };
+}

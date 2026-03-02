@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
-import { UserRole, Task, TaskStatus, ExceptionAlert, TaskActionLog } from './types';
+import { UserRole, Task, TaskStatus, ExceptionAlert, TaskActionLog, ReportData, ReportType, Notification } from './types';
 import { ProcessFlow } from './components/ProcessFlow';
 import { AIAssistant } from './components/AIAssistant';
 import { TaskDetailsDrawer } from './components/TaskDetailsDrawer';
@@ -42,6 +42,10 @@ import { TaskEditModal } from './components/TaskEditModal';
 import { TaskCreateModal } from './components/TaskCreateModal';
 import TrainingStudyPage from './components/TrainingStudyPage';
 import TrainingExamPage from './components/TrainingExamPage';
+import ReportDetailPage from './components/ReportDetailPage';
+import { NotificationSystem } from './components/NotificationSystem';
+import ExceptionAlertListPage from './components/ExceptionAlertListPage';
+import TaskListPage from './components/TaskListPage';
 
 // --- MOCK DATA GENERATORS ---
 
@@ -394,6 +398,10 @@ export default function App() {
     'training-1': { studyCompleted: false, examCompleted: false },
     'training-2': { studyCompleted: false, examCompleted: false },
   });
+  const [reports, setReports] = useState<ReportData[]>([]);
+  const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [currentPage, setCurrentPage] = useState<'home' | 'tasks' | 'alerts' | null>(null);
 
   // Switch tasks when role changes
   useEffect(() => {
@@ -593,9 +601,298 @@ export default function App() {
     setCurrentTrainingPage(null);
   };
 
+  const generateMockReports = () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // 周报显示为当前日期所在周属于当月的第几周减1周
+    const currentDayOfWeek = today.getDay();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstDayOfWeek = firstDayOfMonth.getDay();
+    const weekNumber = Math.ceil((today.getDate() + firstDayOfWeek - 1) / 7);
+    const lastWeekNumber = Math.max(1, weekNumber - 1);
+    
+    // 月报显示为当前日期所在月减1月
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    // 日报显示当前日期减1天（昨天）
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    return [
+      {
+        reportId: 'report-daily-1',
+        reportType: ReportType.DAILY,
+        reportDate: yesterdayStr,
+        periodStart: yesterday.toISOString().split('T')[0],
+        periodEnd: today.toISOString().split('T')[0],
+        totalRevenue: 15680,
+        totalOrderCount: 342,
+        totalCustomerCount: 289,
+        avgOrderValue: 45.85,
+        grossMargin: 6635,
+        grossMarginRate: 42.3,
+        revenueTrend: 12.5,
+        orderTrend: 8.3,
+        customerTrend: 5.7,
+        storeMetrics: [
+          {
+            storeId: 'store-1',
+            storeName: '南京路店',
+            revenue: 8450,
+            orderCount: 185,
+            customerCount: 156,
+            avgOrderValue: 45.68,
+            grossMargin: 3570,
+            grossMarginRate: 42.3,
+            inventoryTurnover: 4.2,
+            alerts: ['毛利率低于目标值']
+          },
+          {
+            storeId: 'store-2',
+            storeName: '淮海路店',
+            revenue: 7230,
+            orderCount: 157,
+            customerCount: 133,
+            avgOrderValue: 46.05,
+            grossMargin: 3065,
+            grossMarginRate: 42.4,
+            inventoryTurnover: 3.8,
+            alerts: []
+          }
+        ],
+        summary: '今日整体营收表现良好，同比增长12.5%。南京路店毛利率略低于目标值，需要关注产品结构和促销策略。',
+        keyInsights: [
+          '午市时段营收占比最高，达到45%',
+          '高毛利套餐销量占比下降3%',
+          '新客户增长8%，老客户复购率提升5%'
+        ],
+        recommendations: [
+          '优化南京路店产品结构，提升高毛利套餐销量',
+          '加强午市时段的运营效率',
+          '继续推广会员复购活动'
+        ]
+      },
+      {
+        reportId: 'report-weekly-1',
+        reportType: ReportType.WEEKLY,
+        reportDate: `第${lastWeekNumber}周`,
+        periodStart: today.toISOString().split('T')[0],
+        periodEnd: today.toISOString().split('T')[0],
+        totalRevenue: 98500,
+        totalOrderCount: 2150,
+        totalCustomerCount: 1820,
+        avgOrderValue: 45.81,
+        grossMargin: 41650,
+        grossMarginRate: 42.3,
+        revenueTrend: 8.7,
+        orderTrend: 6.2,
+        customerTrend: 4.5,
+        storeMetrics: [
+          {
+            storeId: 'store-1',
+            storeName: '南京路店',
+            revenue: 52800,
+            orderCount: 1150,
+            customerCount: 975,
+            avgOrderValue: 45.91,
+            grossMargin: 22320,
+            grossMarginRate: 42.3,
+            inventoryTurnover: 4.1,
+            alerts: ['库存周转天数偏高']
+          },
+          {
+            storeId: 'store-2',
+            storeName: '淮海路店',
+            revenue: 45700,
+            orderCount: 1000,
+            customerCount: 845,
+            avgOrderValue: 45.70,
+            grossMargin: 19330,
+            grossMarginRate: 42.3,
+            inventoryTurnover: 3.9,
+            alerts: []
+          }
+        ],
+        summary: '本周整体营收稳定增长，同比增长8.7%。南京路店库存周转天数偏高，建议优化库存管理。',
+        keyInsights: [
+          '周末营收占比达到35%，高于工作日',
+          '会员消费占比提升至65%',
+          '新品推广效果显著，销量增长20%'
+        ],
+        recommendations: [
+          '优化南京路店库存管理，降低库存周转天数',
+          '继续加强会员运营，提升复购率',
+          '扩大新品推广范围'
+        ]
+      },
+      {
+        reportId: 'report-monthly-1',
+        reportType: ReportType.MONTHLY,
+        reportDate: `${lastMonth.getMonth() + 1}月`,
+        periodStart: lastMonth.toISOString().split('T')[0],
+        periodEnd: today.toISOString().split('T')[0],
+        totalRevenue: 385000,
+        totalOrderCount: 8400,
+        totalCustomerCount: 7100,
+        avgOrderValue: 45.83,
+        grossMargin: 162850,
+        grossMarginRate: 42.3,
+        revenueTrend: 15.2,
+        orderTrend: 12.8,
+        customerTrend: 10.5,
+        storeMetrics: [
+          {
+            storeId: 'store-1',
+            storeName: '南京路店',
+            revenue: 206000,
+            orderCount: 4500,
+            customerCount: 3800,
+            avgOrderValue: 45.78,
+            grossMargin: 87120,
+            grossMarginRate: 42.3,
+            inventoryTurnover: 4.0,
+            alerts: ['人员成本偏高', '能耗费用增长']
+          },
+          {
+            storeId: 'store-2',
+            storeName: '淮海路店',
+            revenue: 179000,
+            orderCount: 3900,
+            customerCount: 3300,
+            avgOrderValue: 45.90,
+            grossMargin: 75730,
+            grossMarginRate: 42.3,
+            inventoryTurnover: 3.8,
+            alerts: []
+          }
+        ],
+        summary: '本月营收表现优异，同比增长15.2%。南京路店需要关注成本控制，优化人员和能耗管理。',
+        keyInsights: [
+          '整体毛利率稳定在42.3%，符合预期',
+          '会员复购率达到68%，创历史新高',
+          '线上订单占比提升至25%'
+        ],
+        recommendations: [
+          '优化南京路店人员排班，降低人力成本',
+          '加强能耗管理，降低运营成本',
+          '继续拓展线上业务，提升订单量'
+        ]
+      }
+    ];
+  };
+
+  const generateReportNotification = (report: ReportData) => {
+    const typeLabel = report.reportType === ReportType.DAILY ? '日报' : report.reportType === ReportType.WEEKLY ? '周报' : '月报';
+    return {
+      id: `notification-${report.reportId}`,
+      type: 'REPORT' as const,
+      title: `${typeLabel}已生成`,
+      content: `您的${typeLabel}已生成，点击查看详情。总营收：¥${report.totalRevenue.toLocaleString()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: false,
+      data: {
+        reportId: report.reportId,
+        reportType: report.reportType
+      }
+    };
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (notification.type === 'REPORT' && notification.data?.reportId) {
+      const report = reports.find(r => r.reportId === notification.data.reportId);
+      if (report) {
+        setSelectedReport(report);
+      }
+    }
+  };
+
+  const handleMarkAsRead = (notificationId: string) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === notificationId ? { ...n, isRead: true } : n
+    ));
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  const handleReportBack = () => {
+    setSelectedReport(null);
+  };
+
+  const simulateDailyReportPush = () => {
+    if (role !== UserRole.FRANCHISEE) return;
+
+    const mockReports = generateMockReports();
+    const dailyReport = mockReports.find(r => r.reportType === ReportType.DAILY);
+    
+    if (dailyReport) {
+      setReports(prev => [dailyReport, ...prev]);
+      const notification = generateReportNotification(dailyReport);
+      setNotifications(prev => [notification, ...prev]);
+    }
+  };
+
+  useEffect(() => {
+    if (role === UserRole.FRANCHISEE) {
+      const mockReports = generateMockReports();
+      setReports(mockReports);
+      
+      const timer = setInterval(() => {
+        simulateDailyReportPush();
+      }, 30000);
+
+      return () => clearInterval(timer);
+    }
+  }, [role]);
+
   const handleTrainingBack = () => {
     setCurrentTrainingPage(null);
   };
+
+  const handleAlertBack = () => {
+    setCurrentPage(null);
+  };
+
+  const handleTaskBack = () => {
+    setCurrentPage(null);
+  };
+
+  const handleViewMoreAlerts = () => {
+    setCurrentPage('alerts');
+  };
+
+  if (currentPage === 'alerts') {
+    return (
+      <ExceptionAlertListPage
+        alerts={alerts}
+        onBack={handleAlertBack}
+        onAssignTask={handleAssignTask}
+        onVerify={handleVerifyAlert}
+      />
+    );
+  }
+
+  if (currentPage === 'tasks') {
+    return (
+      <TaskListPage
+        tasks={tasks}
+        onBack={handleTaskBack}
+        onTaskClick={setSelectedTask}
+      />
+    );
+  }
+
+  if (selectedReport) {
+    return (
+      <ReportDetailPage
+        report={selectedReport}
+        onBack={handleReportBack}
+      />
+    );
+  }
 
   if (currentTrainingPage) {
     if (currentTrainingPage === 'study') {
@@ -762,12 +1059,12 @@ export default function App() {
               <ChevronDown className="absolute right-2 top-1.5 text-gray-500 pointer-events-none" size={12} />
            </div>
 
-           <button className="relative text-gray-500">
-             <Bell size={20} />
-             {showDueWarning && (
-                <span className="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full border-2 border-white animate-pulse"></span>
-             )}
-           </button>
+           <NotificationSystem 
+             notifications={notifications}
+             onNotificationClick={handleNotificationClick}
+             onMarkAsRead={handleMarkAsRead}
+             onClearAll={handleClearAllNotifications}
+           />
            
            <div className="w-7 h-7 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
               <img src="https://picsum.photos/100/100" alt="User" />
@@ -816,22 +1113,36 @@ export default function App() {
               {/* ==================== 门店店员首页 ==================== */}
               {role === UserRole.STORE_ASSISTANT && (
                 <>
-                  {/* 今日个人业绩 */}
+                  {/* 个人业绩&预估收入 */}
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="px-4 py-2.5 border-b border-gray-100">
                       <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                         <TrendingUp size={16} className="text-red-600" />
-                        今日个人业绩
+                        个人业绩&预估收入
                       </h3>
                     </div>
-                    <div className="p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <StatCard title="销售额" value="¥1,208" trend="+5.2%" highlight />
                         <StatCard title="达成率" value="85%" trend="+3%" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
                         <StatCard title="订单数" value="42" trend="+8" />
                         <StatCard title="客单价" value="¥28.8" trend="neutral" />
+                      </div>
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-xs text-gray-500">实时提成</p>
+                            <p className="text-base font-bold text-gray-800">¥120.80</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">奖金预估</p>
+                            <p className="text-base font-bold text-green-600">¥280.00</p>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5">
+                          <div className="bg-gradient-to-r from-green-500 to-green-600 h-1.5 rounded-full" style={{ width: '65%' }}></div>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1">完成目标可额外获得¥150奖金</p>
                       </div>
                     </div>
                   </div>
@@ -963,61 +1274,82 @@ export default function App() {
                       )}
                     </div>
                   </div>
-
-                  {/* 收入预估 */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                        <Target size={16} className="text-green-500" />
-                        收入预估
-                      </h3>
-                    </div>
-                    <div className="p-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="text-xs text-gray-500">实时提成</p>
-                          <p className="text-lg font-bold text-gray-800">¥120.80</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">奖金预估</p>
-                          <p className="text-lg font-bold text-green-600">¥280.00</p>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">完成目标可额外获得¥150奖金</p>
-                    </div>
-                  </div>
                 </>
               )}
 
               {/* ==================== 加盟商首页 ==================== */}
               {role === UserRole.FRANCHISEE && (
                 <>
-                  <ExceptionAlertModule alerts={alerts} onAssignTask={handleAssignTask} onVerify={handleVerifyAlert} />
+                  <ExceptionAlertModule alerts={alerts} onAssignTask={handleAssignTask} onVerify={handleVerifyAlert} onViewMore={handleViewMoreAlerts} />
 
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="px-4 py-2.5 border-b border-gray-100">
                       <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                        <TrendingUp size={16} className="text-red-600" />
-                        门店核心指标
+                        <PieChart size={16} className="text-blue-600" />
+                        门店经营数据
                       </h3>
                     </div>
-                    <div className="p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <StatCard title="实时营收" value="¥12,840" trend="+12%" highlight />
-                        <DualStatCard value1="¥45,680" label1="货款余额" value2="¥32,450" label2="本月进货额" />
+                    
+                    {/* 报表快捷入口 - 与数据指标融合设计 */}
+                    <div className="p-3">
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {reports.slice(0, 3).map((report) => {
+                          const typeLabel = report.reportType === ReportType.DAILY ? '日报' : report.reportType === ReportType.WEEKLY ? '周报' : '月报';
+                          const typeColor = report.reportType === ReportType.DAILY ? 'from-blue-500 to-blue-600' : report.reportType === ReportType.WEEKLY ? 'from-purple-500 to-purple-600' : 'from-green-500 to-green-600';
+                          const bgColor = report.reportType === ReportType.DAILY ? 'bg-blue-50' : report.reportType === ReportType.WEEKLY ? 'bg-purple-50' : 'bg-green-50';
+                          const displayDate = report.reportType === ReportType.DAILY ? report.reportDate.slice(5) : report.reportDate;
+                          return (
+                            <div 
+                              key={report.reportId}
+                              onClick={() => setSelectedReport(report)}
+                              className={`p-2.5 ${bgColor} rounded-xl border border-gray-100 cursor-pointer hover:shadow-md transition-all active:scale-95`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded bg-gradient-to-r ${typeColor}`}>
+                                  {typeLabel}
+                                </span>
+                                <span className="text-[10px] text-gray-500">{displayDate}</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-800">¥{(report.totalRevenue / 10000).toFixed(1)}万</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className={`text-[10px] ${report.revenueTrend >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                  {report.revenueTrend >= 0 ? '↑' : '↓'} {Math.abs(report.revenueTrend).toFixed(1)}%
+                                </span>
+                                <span className="text-[10px] text-gray-400">环比</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <StatCard title="昨日毛利额" value="¥5,432" trend="-3.2%" />
-                        <StatCard title="昨日毛利率" value="42.3%" trend="-5.7%" />
+                      
+                      {/* 核心数据指标 */}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="p-2.5 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border border-red-100">
+                          <p className="text-[10px] text-gray-500 mb-0.5">实时营收</p>
+                          <p className="text-sm font-bold text-gray-800">¥12,840</p>
+                          <span className="text-[10px] text-red-500">↑ 12%</span>
+                        </div>
+                        <div className="p-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                          <p className="text-[10px] text-gray-500 mb-0.5">货款余额</p>
+                          <p className="text-sm font-bold text-gray-800">¥45,680</p>
+                          <span className="text-[10px] text-gray-400">本月进货 ¥32,450</span>
+                        </div>
+                        <div className="p-2.5 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                          <p className="text-[10px] text-gray-500 mb-0.5">昨日毛利</p>
+                          <p className="text-sm font-bold text-gray-800">¥5,432</p>
+                          <span className="text-[10px] text-green-500">↓ 3.2%</span>
+                        </div>
+                        <div className="p-2.5 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border border-amber-100">
+                          <p className="text-[10px] text-gray-500 mb-0.5">毛利率</p>
+                          <p className="text-sm font-bold text-gray-800">42.3%</p>
+                          <span className="text-[10px] text-green-500">↑ 2.1%</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                    <div className="px-4 py-2.5 border-b border-gray-100 flex justify-between items-center">
                       <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                         <ClipboardList size={16} className="text-red-600" />
                         待办任务
@@ -1027,10 +1359,10 @@ export default function App() {
                       </span>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).slice(0, 4).map((task) => (
+                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).slice(0, 2).map((task) => (
                         <div 
                           key={task.id} 
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                          className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                           onClick={() => setSelectedTask(task)}
                         >
                           <div className="flex items-center justify-between">
@@ -1048,6 +1380,19 @@ export default function App() {
                           </div>
                         </div>
                       ))}
+                      
+                      {/* View More Link */}
+                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length > 2 && (
+                        <div className="px-4 py-2.5 border-t border-gray-50">
+                          <button
+                            onClick={() => setCurrentPage('tasks')}
+                            className="w-full flex items-center justify-center gap-1 text-xs text-blue-600 font-medium hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+                          >
+                            <span>查看更多({tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length - 2}条)</span>
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>
