@@ -46,6 +46,9 @@ import ReportDetailPage from './components/ReportDetailPage';
 import { NotificationSystem } from './components/NotificationSystem';
 import ExceptionAlertListPage from './components/ExceptionAlertListPage';
 import TaskListPage from './components/TaskListPage';
+import Workbench from './components/Workbench';
+import BaoShouTouPage from './components/BaoShouTouPage';
+import TrainingManagementPage from './components/TrainingManagementPage';
 
 // --- MOCK DATA GENERATORS ---
 
@@ -389,7 +392,6 @@ export default function App() {
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
   const [showDueWarning, setShowDueWarning] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [currentTrainingPage, setCurrentTrainingPage] = useState<'study' | 'exam' | null>(null);
@@ -402,6 +404,8 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentPage, setCurrentPage] = useState<'home' | 'tasks' | 'alerts' | null>(null);
+  const [currentModule, setCurrentModule] = useState<{ module: string; subAction?: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'home' | 'workbench' | 'data' | 'profile'>('home');
 
   // Switch tasks when role changes
   useEffect(() => {
@@ -892,6 +896,33 @@ export default function App() {
         onBack={handleReportBack}
       />
     );
+  }
+
+  if (currentModule) {
+    const handleModuleBack = () => setCurrentModule(null);
+    
+    switch (currentModule.module) {
+      case 'sales':
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">销售操作页面</div>;
+      case 'store':
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">店务管理页面</div>;
+      case 'inventory':
+        if (currentModule.subAction === 'baoshoutou') {
+          return <BaoShouTouPage onBack={handleModuleBack} />;
+        }
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">进销存管理页面</div>;
+      case 'training':
+        if (currentModule.subAction === 'trainingCenter') {
+          return <TrainingManagementPage onBack={handleModuleBack} role={role} />;
+        }
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">营运培训页面</div>;
+      case 'common':
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">常用操作页面</div>;
+      case 'other':
+        return <div className="w-full h-full flex items-center justify-center text-gray-500">其他页面</div>;
+      default:
+        return null;
+    }
   }
 
   if (currentTrainingPage) {
@@ -1715,251 +1746,7 @@ export default function App() {
         )}
 
         {activeTab === 'workbench' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            {/* 常用功能模块及编辑 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="font-bold text-gray-800 text-sm">常用功能</h3>
-                <button className="text-xs text-gray-500 flex items-center gap-1">
-                  <span>编辑</span>
-                  <ChevronDown size={12} />
-                </button>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
-                    <span className="text-sm">🎯</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">临期促销</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">🛒</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">订单管理</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">📦</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">商品上下架</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">📋</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">库存盘点</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">🚚</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">报收投</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 销售类 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">销售类</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">🎯</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">临期促销</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">🛒</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">订单管理</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">📦</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">商品上下架</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">📊</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">异常流水</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">🛍️</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">POS商品隐藏</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">📈</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">销售上报</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">📋</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">POS报表</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">📱</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">移动收银</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">🔍</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">扫码核券</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 店务类 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">店务类</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">🚚</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">报收投</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">🎁</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">门店拆包</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">📄</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">调拨</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">🗑️</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">报损</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">🍽️</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">试吃</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">📋</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">库存盘点</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">💻</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">在线运营</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 系统功能 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">系统功能</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">🔑</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">POS登录</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">💻</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">IT服务</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 数据 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">数据</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">💬</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">私域管理</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">🧭</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">经营罗盘</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 其他类 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="font-bold text-gray-800 text-sm">其他类</h3>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">👣</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">来访报备</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                    <span className="text-sm">💳</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">支付进件</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-                    <span className="text-sm">💰</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">授信</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
-                    <span className="text-sm">🤖</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">绝智</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                    <span className="text-sm">🔧</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">维修申报</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
-                    <span className="text-sm">💼</span>
-                  </div>
-                  <span className="text-[9px] text-gray-600 text-center">企业微信</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Workbench onModuleClick={(module, subAction) => setCurrentModule({ module, subAction })} />
         )}
 
       </main>
@@ -1985,10 +1772,6 @@ export default function App() {
            </button>
          </div>
 
-         <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400 touch-target`}>
-            <MessageSquare size={22} />
-            <span className="text-[10px] font-medium">消息</span>
-         </button>
          <button className={`flex flex-col items-center gap-1 w-16 transition-colors text-gray-400 touch-target`}>
             <User size={22} />
             <span className="text-[10px] font-medium">我的</span>
