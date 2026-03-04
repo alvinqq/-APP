@@ -49,6 +49,7 @@ import TaskListPage from './components/TaskListPage';
 import Workbench from './components/Workbench';
 import BaoShouTouPage from './components/BaoShouTouPage';
 import TrainingManagementPage from './components/TrainingManagementPage';
+import { TaskDetailPage } from './components/TaskDetailPage';
 
 // --- MOCK DATA GENERATORS ---
 
@@ -387,6 +388,7 @@ export default function App() {
   const [activeLoopStage, setActiveLoopStage] = useState(0); 
   const [simulateLoop, setSimulateLoop] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showTaskDetail, setShowTaskDetail] = useState<boolean>(false);
   const [openingStep, setOpeningStep] = useState(2); 
   const [alerts, setAlerts] = useState<ExceptionAlert[]>(MOCK_ALERTS);
   const [taskFilter, setTaskFilter] = useState<'active' | 'completed'>('active');
@@ -880,11 +882,31 @@ export default function App() {
   }
 
   if (currentPage === 'tasks') {
+    if (showTaskDetail && selectedTask) {
+      return (
+        <TaskDetailPage
+          task={selectedTask}
+          onBack={() => {
+            setShowTaskDetail(false);
+            setSelectedTask(null);
+          }}
+          onComplete={handleTaskComplete}
+          onEdit={handleTaskEdit}
+          onReject={handleTaskReject}
+          onAccept={handleTaskAccept}
+          onAiVerify={handleAiVerify}
+          role={role}
+        />
+      );
+    }
     return (
       <TaskListPage
         tasks={tasks}
         onBack={handleTaskBack}
-        onTaskClick={setSelectedTask}
+        onTaskClick={(task) => {
+          setSelectedTask(task);
+          setShowTaskDetail(true);
+        }}
       />
     );
   }

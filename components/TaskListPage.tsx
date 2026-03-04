@@ -53,11 +53,11 @@ export default function TaskListPage({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="w-full max-w-[430px] mx-auto bg-[#F8FAFC] min-h-screen sm:my-8 sm:rounded-[32px] sm:shadow-2xl sm:border-[8px] sm:border-gray-800 relative flex flex-col font-sans no-font-scaling">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft size={20} className="text-gray-600" />
+      <header className="bg-white border-b border-gray-100 px-4 h-14 flex items-center gap-3 sticky top-0 z-10 sm:rounded-t-[24px]">
+        <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+          <ArrowLeft size={20} />
         </button>
         <h1 className="font-bold text-gray-800 text-sm flex-1">待办任务列表</h1>
         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
